@@ -1,7 +1,7 @@
 # Task 00 — Project setup
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-04
+- Status: `completed`
+- Approval: granted on 2026-09-04
 - Depends on: none
 
 ## Goal
@@ -17,8 +17,8 @@ Create a clean Go repository foundation and durable, per-task progress tracking 
 - [x] Create the target directory skeleton.
 - [x] Create one progress record for every planned task.
 - [x] Verify repository structure and Go module metadata.
-- [ ] Receive explicit user approval.
-- [ ] Create the setup commit after approval.
+- [x] Receive explicit user approval.
+- [x] Create the setup commit after approval.
 
 ## Acceptance evidence
 
@@ -35,3 +35,4 @@ Create a clean Go repository foundation and durable, per-task progress tracking 
 | 2026-09-04 | Setup started from an empty, non-Git directory. |
 | 2026-09-04 | Module owner inferred from `gh api user`: `Raxuis`. |
 | 2026-09-04 | Automated structure and module checks passed; approval requested. |
+| 2026-09-04 | User approved the setup and created commit `8a7655b`. |

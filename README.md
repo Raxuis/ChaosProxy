@@ -17,11 +17,23 @@ Requirements:
 - Go 1.22 or newer
 - Git
 
-Once the phase 0 spike is approved, the development command will be:
+Run the phase 0 spike against a local upstream API:
 
 ```sh
-go run ./cmd/chaosproxy --target http://localhost:3001
+go run ./cmd/chaosproxy --target http://localhost:3001 --delay 2s
 ```
+
+The proxy listens on `http://localhost:7070` by default. Point the frontend's API base URL there, while the proxy forwards requests to the real upstream.
+
+Available phase 0 flags:
+
+```text
+--target URL      upstream base URL (required)
+--port PORT       data-plane listen port (default 7070)
+--delay DURATION  delay before each upstream request (default 0)
+```
+
+Press Ctrl+C to stop the server gracefully.
 
 ## License
 
