@@ -1,0 +1,22 @@
+# Build outputs
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+
+# Test and runtime artifacts
+/coverage/
+/reports/
+*.log
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
