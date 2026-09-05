@@ -1,7 +1,7 @@
 # Task 02 — YAML configuration and route matching
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-05
+- Status: `completed`
+- Approval: granted on 2026-09-05
 - Depends on: task 01
 
 ## Goal
@@ -16,7 +16,7 @@ Add typed YAML configuration, aggregate validation, and precompiled first-match 
 - [x] Ignore query strings and define method case/trailing-slash behavior in tests.
 - [x] Add only `gopkg.in/yaml.v3` as a direct dependency.
 - [x] Run matcher and validation tests plus `go test ./...`.
-- [ ] Receive explicit user approval.
+- [x] Receive explicit user approval.
 
 ## Acceptance evidence
 
@@ -41,3 +41,4 @@ Add typed YAML configuration, aggregate validation, and precompiled first-match 
 |---|---|
 | 2026-09-05 | Implementation started after task 01 approval. |
 | 2026-09-05 | Configuration and matching modules verified; approval requested. |
+| 2026-09-05 | User approved continuation; implementation is committed as `6f9e3e7`. |
