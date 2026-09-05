@@ -1,7 +1,7 @@
 # Task 01 — Minimal reverse proxy spike
 
-- Status: `awaiting_validation`
-- Approval: requested again on 2026-09-04 after design changes
+- Status: `completed`
+- Approval: granted on 2026-09-05
 - Depends on: task 00
 
 ## Goal
@@ -19,8 +19,8 @@ Deliver the phase 0 stdlib-only proxy with a thin CLI and a focused HTTP module.
 - [x] Encapsulate HTTP behavior behind `proxy.NewHandler` in `internal/proxy`.
 - [x] Add table-driven CLI tests and handler-level proxy tests.
 - [x] Run formatting, compilation, vet, and local integration checks.
-- [ ] Manually validate GET/POST proxying, two-second skeleton state, and Ctrl+C.
-- [ ] Receive explicit user approval.
+- [x] Manually validate or accept GET/POST proxying, two-second delay, and Ctrl+C.
+- [x] Receive explicit user approval.
 
 ## Acceptance evidence
 
@@ -45,3 +45,4 @@ Deliver the phase 0 stdlib-only proxy with a thin CLI and a focused HTTP module.
 | 2026-09-04 | Automated and local integration checks passed; approval requested. |
 | 2026-09-04 | User requested an idiomatic multi-file design; task reopened. |
 | 2026-09-04 | Split CLI from HTTP behavior and added tests; approval requested again. |
+| 2026-09-05 | User approved continuation; implementation is committed as `b583ff1`. |
