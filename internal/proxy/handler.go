@@ -58,6 +58,17 @@ func NewHandler(configured *config.Config, logger *log.Logger) (*Handler, error)
 	return handler, nil
 }
 
+// Update compiles configured completely before atomically publishing it. A
+// failed update leaves the current runtime untouched.
+func (handler *Handler) Update(configured *config.Config) error {
+	runtime, err := compileRuntime(configured)
+	if err != nil {
+		return err
+	}
+	handler.current.Store(runtime)
+	return nil
+}
+
 // ServeHTTP captures one immutable runtime snapshot for the complete request.
 func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	started := time.Now()

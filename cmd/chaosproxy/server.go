@@ -14,12 +14,28 @@ import (
 
 const shutdownTimeout = 10 * time.Second
 
-func run(port int, target string, seed int64, handler http.Handler, logger *log.Logger) error {
+func run(
+	port int,
+	target string,
+	seed int64,
+	handler http.Handler,
+	watchConfig func(context.Context) error,
+	logger *log.Logger,
+) error {
 	server := &http.Server{
 		Addr:              ":" + strconv.Itoa(port),
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+
+	applicationContext, cancelApplication := context.WithCancel(context.Background())
+	defer cancelApplication()
+	signalContext, stopSignals := signal.NotifyContext(
+		applicationContext,
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer stopSignals()
 
 	serverErrors := make(chan error, 1)
 	go func() {
@@ -31,27 +47,44 @@ func run(port int, target string, seed int64, handler http.Handler, logger *log.
 		serverErrors <- err
 	}()
 
-	signalContext, stopSignals := signal.NotifyContext(
-		context.Background(),
-		os.Interrupt,
-		syscall.SIGTERM,
-	)
-	defer stopSignals()
+	var watcherErrors chan error
+	if watchConfig != nil {
+		watcherErrors = make(chan error, 1)
+		go func() {
+			watcherErrors <- watchConfig(signalContext)
+		}()
+	}
 
+	serverFinished := false
+	watcherFinished := watchConfig == nil
+	var serveErr error
+	var watcherErr error
 	select {
-	case err := <-serverErrors:
-		return err
+	case serveErr = <-serverErrors:
+		serverFinished = true
+	case watcherErr = <-watcherErrors:
+		watcherFinished = true
+		if watcherErr == nil && signalContext.Err() == nil {
+			watcherErr = errors.New("config watcher stopped unexpectedly")
+		}
 	case <-signalContext.Done():
 		logger.Printf("shutdown requested")
 	}
+	cancelApplication()
 
-	shutdownContext, cancelShutdown := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer cancelShutdown()
-
-	shutdownErr := server.Shutdown(shutdownContext)
-	serveErr := <-serverErrors
-	if shutdownErr != nil {
-		_ = server.Close()
+	var shutdownErr error
+	if !serverFinished {
+		shutdownContext, cancelShutdown := context.WithTimeout(context.Background(), shutdownTimeout)
+		shutdownErr = server.Shutdown(shutdownContext)
+		cancelShutdown()
+		if shutdownErr != nil {
+			_ = server.Close()
+		}
+		serveErr = <-serverErrors
 	}
-	return errors.Join(shutdownErr, serveErr)
+	if !watcherFinished {
+		watcherErr = <-watcherErrors
+	}
+
+	return errors.Join(shutdownErr, serveErr, watcherErr)
 }

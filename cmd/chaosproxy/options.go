@@ -78,11 +78,15 @@ func resolveConfig(opts options) (*config.Config, error) {
 		configured = loaded
 	}
 
+	applyOverrides(configured, opts)
+	return configured, nil
+}
+
+func applyOverrides(configured *config.Config, opts options) {
 	if opts.target != "" {
 		configured.Target = opts.target
 	}
 	if opts.seed.set {
 		configured.Seed = opts.seed.value
 	}
-	return configured, nil
 }

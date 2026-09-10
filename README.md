@@ -36,8 +36,9 @@ go run ./cmd/chaosproxy --config ./examples/chaos.yaml
 ```
 
 The first enabled matching rule wins. Edit the target and route patterns in the
-YAML to match the API under test. Configuration hot reload is planned for the
-next task, so restart the process after editing the file for now.
+YAML to match the API under test. Valid edits are applied automatically after a
+short debounce; invalid edits are logged and the last valid configuration stays
+active.
 
 Available flags:
 
