@@ -46,7 +46,7 @@ func TestReflectCORSHandlesPreflightWithoutUpstream(t *testing.T) {
 func TestReflectCORSOverridesUpstreamOrigin(t *testing.T) {
 	t.Parallel()
 
-	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, *http.Request) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Access-Control-Allow-Origin", "https://wrong.example")
 		_, _ = io.WriteString(writer, "ok")
 	}))
@@ -69,7 +69,7 @@ func TestReflectCORSOverridesUpstreamOrigin(t *testing.T) {
 func TestPassthroughCORSPreservesUpstream(t *testing.T) {
 	t.Parallel()
 
-	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, *http.Request) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Access-Control-Allow-Origin", "https://upstream.example")
 	}))
 	defer upstream.Close()
@@ -88,7 +88,7 @@ func TestPassthroughCORSPreservesUpstream(t *testing.T) {
 func TestOffCORSRemovesUpstreamHeaders(t *testing.T) {
 	t.Parallel()
 
-	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, *http.Request) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Access-Control-Allow-Origin", "*")
 		writer.Header().Set("Access-Control-Expose-Headers", "X-Request-ID")
 	}))

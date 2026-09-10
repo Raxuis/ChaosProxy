@@ -57,6 +57,7 @@ func addVary(headers http.Header, value string) {
 			if strings.EqualFold(strings.TrimSpace(existing), value) {
 				return
 			}
+		}
 	}
 	headers.Add("Vary", value)
 }

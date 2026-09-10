@@ -1,0 +1,29 @@
+target: http://localhost:9000
+seed: 42
+cors: reflect
+
+rules:
+  - name: slow-search
+    match: GET /api/search*
+    latency:
+      dist: fixed
+      value: 800ms
+      jitter: 200ms
+
+  - name: unavailable-orders
+    match: POST /api/orders
+    status:
+      code: 503
+      probability: 1
+      retry_after: 2
+
+  - name: hanging-profile
+    match: GET /api/profile
+    hang:
+      probability: 0.1
+
+  - name: broken-user-payload
+    match: GET /api/user/*
+    truncate:
+      probability: 0.1
+      at: 0.5

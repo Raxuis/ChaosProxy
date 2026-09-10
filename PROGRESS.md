@@ -21,8 +21,8 @@ Every task follows this state machine:
 | 00 | Setup | Repository and progress tracking | `completed` | [task-00-project-setup.md](docs/progress/task-00-project-setup.md) |
 | 01 | 0 | Minimal reverse proxy spike | `completed` | [task-01-reverse-proxy-spike.md](docs/progress/task-01-reverse-proxy-spike.md) |
 | 02 | 1 | YAML configuration and route matching | `completed` | [task-02-config-and-matching.md](docs/progress/task-02-config-and-matching.md) |
-| 03 | 1 | Fault interface and first four faults | `awaiting_validation` | [task-03-core-faults.md](docs/progress/task-03-core-faults.md) |
-| 04 | 1 | Proxy pipeline and CORS | `pending` | [task-04-pipeline-and-cors.md](docs/progress/task-04-pipeline-and-cors.md) |
+| 03 | 1 | Fault interface and first four faults | `completed` | [task-03-core-faults.md](docs/progress/task-03-core-faults.md) |
+| 04 | 1 | Proxy pipeline and CORS | `awaiting_validation` | [task-04-pipeline-and-cors.md](docs/progress/task-04-pipeline-and-cors.md) |
 | 05 | 1 | Configuration hot reload | `pending` | [task-05-hot-reload.md](docs/progress/task-05-hot-reload.md) |
 | 06 | 2 | Event bus and control plane | `pending` | [task-06-events-and-control-plane.md](docs/progress/task-06-events-and-control-plane.md) |
 | 07 | 2 | Embedded web UI | `pending` | [task-07-web-ui.md](docs/progress/task-07-web-ui.md) |

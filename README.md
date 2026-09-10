@@ -6,32 +6,49 @@ Chaos Proxy will sit between a frontend application and its real HTTP API, injec
 
 ## Project status
 
-The repository is being built incrementally. There is no usable proxy binary yet.
+Phase 1 is in progress. The proxy already supports route matching, seeded fault
+injection, browser-safe CORS handling, and streaming responses.
 
 See [PROGRESS.md](PROGRESS.md) for the roadmap, current task, and validation gates.
 
-## Planned local development
+## Local development
 
 Requirements:
 
 - Go 1.22 or newer
 - Git
 
-Run the phase 0 spike against a local upstream API:
+The `--target` is the real API, not the frontend. For example, if the frontend
+runs on port `3001` and its API runs on port `9000`, start Chaos Proxy with:
 
 ```sh
-go run ./cmd/chaosproxy --target http://localhost:3001 --delay 2s
+go run ./cmd/chaosproxy --target http://localhost:9000
 ```
 
-The proxy listens on `http://localhost:7070` by default. Point the frontend's API base URL there, while the proxy forwards requests to the real upstream.
+The proxy listens on `http://localhost:7070` by default. Configure the frontend's
+API base URL as `http://localhost:7070`; keep the frontend itself on port `3001`.
+Without `--config`, Chaos Proxy is a transparent passthrough and injects no fault.
 
-Available phase 0 flags:
+To inject faults, use the example configuration:
+
+```sh
+go run ./cmd/chaosproxy --config ./examples/chaos.yaml
+```
+
+The first enabled matching rule wins. Edit the target and route patterns in the
+YAML to match the API under test. Configuration hot reload is planned for the
+next task, so restart the process after editing the file for now.
+
+Available flags:
 
 ```text
---target URL      upstream base URL (required)
---port PORT       data-plane listen port (default 7070)
---delay DURATION  delay before each upstream request (default 0)
+--config PATH  YAML configuration file
+--target URL   upstream base URL; overrides the YAML value
+--port PORT    data-plane listen port (default 7070)
+--seed N       random seed; overrides the YAML value
 ```
+
+At least one of `--config` or `--target` is required.
 
 Press Ctrl+C to stop the server gracefully.
 

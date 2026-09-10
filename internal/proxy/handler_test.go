@@ -255,11 +255,34 @@ func TestHandlerLogsRuleFaultAndLatencies(t *testing.T) {
 	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "http://proxy.test/api", nil))
 
 	for _, field := range []string{
-		`rule="slow"`, `faults="latency"`, "injected_latency_ms=1", "upstream_latency_ms=", "upstream_status=201", "status=201",
+		`rule="slow"`, `faults="latency"`, "injected_latency_ms=1", "upstream_latency_ms=", "upstream_status=201", "status=201", `error=""`,
 	} {
 		if !strings.Contains(logs.String(), field) {
 			t.Errorf("log %q does not contain %q", logs.String(), field)
 		}
+	}
+}
+
+func TestHandlerReturnsBrowserVisibleBadGateway(t *testing.T) {
+	t.Parallel()
+
+	unavailable := httptest.NewServer(http.NotFoundHandler())
+	target := unavailable.URL
+	unavailable.Close()
+	handler := newTestHandler(t, target, config.CORSReflect, nil)
+	request := httptest.NewRequest(http.MethodGet, "http://proxy.test/api", nil)
+	request.Header.Set("Origin", "http://localhost:3001")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want 502", response.Code)
+	}
+	if got := response.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:3001" {
+		t.Fatalf("Access-Control-Allow-Origin = %q, want reflected origin", got)
+	}
+	if !strings.Contains(response.Body.String(), "upstream unavailable") {
+		t.Fatalf("body = %q, want explicit upstream error", response.Body.String())
 	}
 }
 

@@ -1,7 +1,7 @@
 # Task 03 — Fault interface and core faults
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-05
+- Status: `completed`
+- Approval: granted on 2026-09-10
 - Depends on: task 02
 
 ## Goal
@@ -17,7 +17,7 @@ Create the extensible fault contract, registry, and latency, status, hang, and t
 - [x] Build faults from a rule in deterministic order.
 - [x] Test cancellation, streaming, configuration errors, and goroutine cleanup.
 - [x] Run `go test ./...`.
-- [ ] Receive explicit user approval.
+- [x] Receive explicit user approval.
 
 ## Acceptance evidence
 
@@ -44,3 +44,4 @@ Create the extensible fault contract, registry, and latency, status, hang, and t
 |---|---|
 | 2026-09-05 | Implementation started after task 02 approval. |
 | 2026-09-05 | Core faults and deterministic registry verified; approval requested. |
+| 2026-09-10 | User approved task 03 by asking to continue. |

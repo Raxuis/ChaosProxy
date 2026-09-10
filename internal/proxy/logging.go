@@ -70,9 +70,12 @@ func logRequest(
 	)
 }
 
-func requestError(metrics *requestMetrics) error {
+func requestError(metrics *requestMetrics) string {
 	if metrics.pipelineError != nil {
-		return metrics.pipelineError
+		return metrics.pipelineError.Error()
 	}
-	return metrics.proxyError
+	if metrics.proxyError != nil {
+		return metrics.proxyError.Error()
+	}
+	return ""
 }

@@ -14,10 +14,10 @@ const (
 
 // Config is the complete file-backed configuration.
 type Config struct {
-	Target string `json:"target" yaml:"target"`
-	Seed   int64  `json:"seed" yaml:"seed"`
+	Target string   `json:"target" yaml:"target"`
+	Seed   int64    `json:"seed" yaml:"seed"`
 	CORS   CORSMode `json:"cors" yaml:"cors"`
-	Rules  []Rule `json:"rules" yaml:"rules"`
+	Rules  []Rule   `json:"rules" yaml:"rules"`
 
 	source sourceLocation
 }
