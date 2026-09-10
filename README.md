@@ -28,6 +28,8 @@ go run ./cmd/chaosproxy --target http://localhost:9000
 The proxy listens on `http://localhost:7070` by default. Configure the frontend's
 API base URL as `http://localhost:7070`; keep the frontend itself on port `3001`.
 Without `--config`, Chaos Proxy is a transparent passthrough and injects no fault.
+Runtime configuration and the SSE event stream are available from the separate
+control plane on `http://localhost:7071`.
 
 To inject faults, use the example configuration:
 
@@ -46,10 +48,21 @@ Available flags:
 --config PATH  YAML configuration file
 --target URL   upstream base URL; overrides the YAML value
 --port PORT    data-plane listen port (default 7070)
+--control-port PORT  control-plane listen port (default 7071)
 --seed N       random seed; overrides the YAML value
 ```
 
 At least one of `--config` or `--target` is required.
+
+Control-plane endpoints:
+
+```text
+GET  /healthz
+GET  /api/events
+GET  /api/config
+PUT  /api/rules/{name}  body: {"enabled": false}
+POST /api/reset
+```
 
 Press Ctrl+C to stop the server gracefully.
 

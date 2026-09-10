@@ -16,22 +16,25 @@ func TestParseOptions(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		args       []string
-		wantTarget string
-		wantConfig string
-		wantPort   int
-		wantSeed   int64
-		seedSet    bool
-		wantError  string
+		name            string
+		args            []string
+		wantTarget      string
+		wantConfig      string
+		wantPort        int
+		wantControlPort int
+		wantSeed        int64
+		seedSet         bool
+		wantError       string
 	}{
-		{name: "target only", args: []string{"--target", "http://localhost:9000"}, wantTarget: "http://localhost:9000", wantPort: 7070},
-		{name: "config only", args: []string{"--config", "chaos.yaml"}, wantConfig: "chaos.yaml", wantPort: 7070},
-		{name: "all overrides", args: []string{"--config", "chaos.yaml", "--target", "https://api.example.com", "--port", "9090", "--seed", "0"}, wantConfig: "chaos.yaml", wantTarget: "https://api.example.com", wantPort: 9090, wantSeed: 0, seedSet: true},
+		{name: "target only", args: []string{"--target", "http://localhost:9000"}, wantTarget: "http://localhost:9000", wantPort: 7070, wantControlPort: 7071},
+		{name: "config only", args: []string{"--config", "chaos.yaml"}, wantConfig: "chaos.yaml", wantPort: 7070, wantControlPort: 7071},
+		{name: "all overrides", args: []string{"--config", "chaos.yaml", "--target", "https://api.example.com", "--port", "9090", "--control-port", "9091", "--seed", "0"}, wantConfig: "chaos.yaml", wantTarget: "https://api.example.com", wantPort: 9090, wantControlPort: 9091, wantSeed: 0, seedSet: true},
 		{name: "missing source", wantError: "either --config or --target is required"},
 		{name: "positional argument", args: []string{"--target", "http://localhost", "extra"}, wantError: "unexpected positional arguments"},
 		{name: "zero port", args: []string{"--target", "http://localhost", "--port", "0"}, wantError: "--port must be between"},
 		{name: "large port", args: []string{"--target", "http://localhost", "--port", "65536"}, wantError: "--port must be between"},
+		{name: "zero control port", args: []string{"--target", "http://localhost", "--control-port", "0"}, wantError: "--control-port must be between"},
+		{name: "port collision", args: []string{"--target", "http://localhost", "--port", "7070", "--control-port", "7070"}, wantError: "must be different"},
 		{name: "invalid seed", args: []string{"--target", "http://localhost", "--seed", "random"}, wantError: "invalid value"},
 	}
 
@@ -49,8 +52,8 @@ func TestParseOptions(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parseOptions() unexpected error: %v", err)
 			}
-			if got.target != test.wantTarget || got.configPath != test.wantConfig || got.port != test.wantPort {
-				t.Errorf("options = %+v, want target=%q config=%q port=%d", got, test.wantTarget, test.wantConfig, test.wantPort)
+			if got.target != test.wantTarget || got.configPath != test.wantConfig || got.port != test.wantPort || got.controlPort != test.wantControlPort {
+				t.Errorf("options = %+v, want target=%q config=%q ports=%d/%d", got, test.wantTarget, test.wantConfig, test.wantPort, test.wantControlPort)
 			}
 			if got.seed.value != test.wantSeed || got.seed.set != test.seedSet {
 				t.Errorf("seed = %+v, want value=%d set=%t", got.seed, test.wantSeed, test.seedSet)

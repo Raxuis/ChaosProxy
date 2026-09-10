@@ -11,17 +11,19 @@ import (
 )
 
 type runtimeConfig struct {
-	target *url.URL
-	seed   int64
-	cors   config.CORSMode
-	match  *rules.Matcher
-	chains map[string][]faults.Fault
+	configured *config.Config
+	target     *url.URL
+	seed       int64
+	cors       config.CORSMode
+	match      *rules.Matcher
+	chains     map[string][]faults.Fault
 }
 
 func compileRuntime(configured *config.Config) (*runtimeConfig, error) {
 	if configured == nil {
 		return nil, errors.New("configuration must not be nil")
 	}
+	configured = configured.Clone()
 	if err := configured.Validate(); err != nil {
 		return nil, fmt.Errorf("validate configuration: %w", err)
 	}
@@ -49,10 +51,11 @@ func compileRuntime(configured *config.Config) (*runtimeConfig, error) {
 		corsMode = config.CORSReflect
 	}
 	return &runtimeConfig{
-		target: target,
-		seed:   configured.Seed,
-		cors:   corsMode,
-		match:  matcher,
-		chains: chains,
+		configured: configured,
+		target:     target,
+		seed:       configured.Seed,
+		cors:       corsMode,
+		match:      matcher,
+		chains:     chains,
 	}, nil
 }

@@ -25,6 +25,7 @@ type Handler struct {
 	requestIndex atomic.Uint64
 	proxy        *httputil.ReverseProxy
 	logger       *log.Logger
+	publisher    EventPublisher
 }
 
 type requestState struct {
@@ -38,7 +39,7 @@ type requestState struct {
 type requestStateKey struct{}
 
 // NewHandler validates and compiles configured before accepting requests.
-func NewHandler(configured *config.Config, logger *log.Logger) (*Handler, error) {
+func NewHandler(configured *config.Config, logger *log.Logger, options ...Option) (*Handler, error) {
 	if logger == nil {
 		return nil, errors.New("logger must not be nil")
 	}
@@ -48,6 +49,14 @@ func NewHandler(configured *config.Config, logger *log.Logger) (*Handler, error)
 	}
 
 	handler := &Handler{logger: logger}
+	for _, option := range options {
+		if option == nil {
+			return nil, errors.New("handler option must not be nil")
+		}
+		if err := option(handler); err != nil {
+			return nil, err
+		}
+	}
 	handler.current.Store(runtime)
 	handler.proxy = &httputil.ReverseProxy{
 		Rewrite:        handler.rewrite,
@@ -58,17 +67,6 @@ func NewHandler(configured *config.Config, logger *log.Logger) (*Handler, error)
 	return handler, nil
 }
 
-// Update compiles configured completely before atomically publishing it. A
-// failed update leaves the current runtime untouched.
-func (handler *Handler) Update(configured *config.Config) error {
-	runtime, err := compileRuntime(configured)
-	if err != nil {
-		return err
-	}
-	handler.current.Store(runtime)
-	return nil
-}
-
 // ServeHTTP captures one immutable runtime snapshot for the complete request.
 func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	started := time.Now()
@@ -77,7 +75,7 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	request = request.WithContext(context.WithValue(request.Context(), requestStateKey{}, state))
 	state.request = request
 	statusWriter := &statusResponseWriter{ResponseWriter: writer}
-	defer logRequest(handler.logger, request, &state.metrics, statusWriter, started)
+	defer handler.finishRequest(request, &state.metrics, statusWriter, started)
 
 	if handlePreflight(statusWriter, request, runtime.cors) {
 		return

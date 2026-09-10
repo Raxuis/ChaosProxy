@@ -23,8 +23,8 @@ Every task follows this state machine:
 | 02 | 1 | YAML configuration and route matching | `completed` | [task-02-config-and-matching.md](docs/progress/task-02-config-and-matching.md) |
 | 03 | 1 | Fault interface and first four faults | `completed` | [task-03-core-faults.md](docs/progress/task-03-core-faults.md) |
 | 04 | 1 | Proxy pipeline and CORS | `completed` | [task-04-pipeline-and-cors.md](docs/progress/task-04-pipeline-and-cors.md) |
-| 05 | 1 | Configuration hot reload | `awaiting_validation` | [task-05-hot-reload.md](docs/progress/task-05-hot-reload.md) |
-| 06 | 2 | Event bus and control plane | `pending` | [task-06-events-and-control-plane.md](docs/progress/task-06-events-and-control-plane.md) |
+| 05 | 1 | Configuration hot reload | `completed` | [task-05-hot-reload.md](docs/progress/task-05-hot-reload.md) |
+| 06 | 2 | Event bus and control plane | `awaiting_validation` | [task-06-events-and-control-plane.md](docs/progress/task-06-events-and-control-plane.md) |
 | 07 | 2 | Embedded web UI | `pending` | [task-07-web-ui.md](docs/progress/task-07-web-ui.md) |
 | 08 | 2 | TCP reset and bandwidth faults | `pending` | [task-08-reset-and-bandwidth.md](docs/progress/task-08-reset-and-bandwidth.md) |
 | 09 | 3 | Determinism and header override | `pending` | [task-09-determinism-and-override.md](docs/progress/task-09-determinism-and-override.md) |

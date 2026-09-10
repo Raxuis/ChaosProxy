@@ -8,6 +8,8 @@ import (
 	"os"
 
 	"github.com/Raxuis/chaosproxy/internal/config"
+	"github.com/Raxuis/chaosproxy/internal/control"
+	"github.com/Raxuis/chaosproxy/internal/events"
 	"github.com/Raxuis/chaosproxy/internal/proxy"
 )
 
@@ -24,9 +26,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("load configuration: %v", err)
 	}
-	handler, err := proxy.NewHandler(configured, log.Default())
+	eventBus := events.NewBus()
+	handler, err := proxy.NewHandler(configured, log.Default(), proxy.WithEventPublisher(eventBus))
 	if err != nil {
 		log.Fatalf("initialize proxy: %v", err)
+	}
+	controlHandler, err := control.NewHandler(eventBus, handler)
+	if err != nil {
+		log.Fatalf("initialize control plane: %v", err)
 	}
 
 	var watchConfig func(context.Context) error
@@ -46,7 +53,16 @@ func main() {
 		watchConfig = watcher.Run
 	}
 
-	if err := run(opts.port, configured.Target, configured.Seed, handler, watchConfig, log.Default()); err != nil {
+	if err := run(serverOptions{
+		dataPort:       opts.port,
+		controlPort:    opts.controlPort,
+		target:         configured.Target,
+		seed:           configured.Seed,
+		dataHandler:    handler,
+		controlHandler: controlHandler,
+		watchConfig:    watchConfig,
+		logger:         log.Default(),
+	}); err != nil {
 		log.Fatalf("chaosproxy stopped: %v", err)
 	}
 }
