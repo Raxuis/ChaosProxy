@@ -59,5 +59,6 @@ func (fault *truncateFault) After(ctx *Context, response *http.Response) error {
 	}
 	response.ContentLength = -1
 	response.Header.Del("Content-Length")
+	emit(ctx, Event{Faults: []string{fault.Name()}})
 	return nil
 }

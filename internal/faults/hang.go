@@ -27,5 +27,6 @@ func (fault *hangFault) Before(ctx *Context) (*ShortCircuit, error) {
 	if err != nil || !triggered {
 		return nil, err
 	}
+	emit(ctx, Event{Faults: []string{fault.Name()}})
 	return &ShortCircuit{Hang: true}, nil
 }

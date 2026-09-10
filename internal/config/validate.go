@@ -25,8 +25,18 @@ func (configured *Config) Validate() error {
 	}
 
 	validateTarget(configured, addIssue)
+	validateCORS(configured, addIssue)
 	validateRules(configured, addIssue)
 	return errors.Join(issues...)
+}
+
+func validateCORS(configured *Config, addIssue func(int, string, string)) {
+	switch configured.CORS {
+	case "", CORSReflect, CORSPassthrough, CORSOff:
+		return
+	default:
+		addIssue(configured.source.lineFor("cors"), "cors", "must be reflect, passthrough, or off")
+	}
 }
 
 func validateTarget(configured *Config, addIssue func(int, string, string)) {

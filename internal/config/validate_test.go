@@ -142,6 +142,15 @@ func TestValidateAllowsProbabilityBoundaries(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsUnknownCORSMode(t *testing.T) {
+	t.Parallel()
+
+	configured := &config.Config{Target: "http://localhost", CORS: "mirror"}
+	if err := configured.Validate(); err == nil || !strings.Contains(err.Error(), "cors must be") {
+		t.Fatalf("Validate() error = %v, want CORS mode error", err)
+	}
+}
+
 func TestValidateRejectsNaNProbabilitiesAndFractions(t *testing.T) {
 	t.Parallel()
 

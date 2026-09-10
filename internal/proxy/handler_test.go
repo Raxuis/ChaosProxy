@@ -9,82 +9,53 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/Raxuis/chaosproxy/internal/config"
 	"github.com/Raxuis/chaosproxy/internal/proxy"
 )
 
-func TestHandlerForwardsRequests(t *testing.T) {
+func TestHandlerPassesThroughRequests(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		method string
-		body   string
-	}{
-		{method: http.MethodGet},
-		{method: http.MethodPost, body: `{"order":42}`},
-	}
-
-	for _, test := range tests {
-		t.Run(test.method, func(t *testing.T) {
-			t.Parallel()
-
-			upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-				body, err := io.ReadAll(request.Body)
-				if err != nil {
-					t.Errorf("read upstream body: %v", err)
-				}
-				response := map[string]string{
-					"method": request.Method,
-					"uri":    request.URL.RequestURI(),
-					"body":   string(body),
-				}
-				writer.Header().Set("Content-Type", "application/json")
-				if err := json.NewEncoder(writer).Encode(response); err != nil {
-					t.Errorf("encode upstream response: %v", err)
-				}
-			}))
-			defer upstream.Close()
-
-			proxyServer := httptest.NewServer(newTestHandler(t, upstream.URL, 0))
-			defer proxyServer.Close()
-
-			request, err := http.NewRequest(
-				test.method,
-				proxyServer.URL+"/api/orders?expand=user",
-				strings.NewReader(test.body),
-			)
-			if err != nil {
-				t.Fatalf("create request: %v", err)
-			}
-			response, err := http.DefaultClient.Do(request)
-			if err != nil {
-				t.Fatalf("send request: %v", err)
-			}
-			defer response.Body.Close()
-
-			var got map[string]string
-			if err := json.NewDecoder(response.Body).Decode(&got); err != nil {
-				t.Fatalf("decode response: %v", err)
-			}
-			if got["method"] != test.method {
-				t.Errorf("method = %q, want %q", got["method"], test.method)
-			}
-			if got["uri"] != "/api/orders?expand=user" {
-				t.Errorf("URI = %q, want original URI", got["uri"])
-			}
-			if got["body"] != test.body {
-				t.Errorf("body = %q, want %q", got["body"], test.body)
-			}
+	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		body, err := io.ReadAll(request.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
+		_ = json.NewEncoder(writer).Encode(map[string]string{
+			"method": request.Method,
+			"uri":    request.URL.RequestURI(),
+			"body":   string(body),
 		})
+	}))
+	defer upstream.Close()
+	proxyServer := httptest.NewServer(newTestHandler(t, upstream.URL, config.CORSPassthrough, nil))
+	defer proxyServer.Close()
+
+	request, err := http.NewRequest(http.MethodPost, proxyServer.URL+"/orders?expand=user", strings.NewReader(`{"id":42}`))
+	if err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatalf("send request: %v", err)
+	}
+	defer response.Body.Close()
+
+	var got map[string]string
+	if err := json.NewDecoder(response.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got["method"] != http.MethodPost || got["uri"] != "/orders?expand=user" || got["body"] != `{"id":42}` {
+		t.Fatalf("upstream request = %#v, want unchanged POST", got)
 	}
 }
 
-func TestHandlerAppliesDelay(t *testing.T) {
+func TestHandlerAppliesLatencyFault(t *testing.T) {
 	t.Parallel()
 
 	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
@@ -92,23 +63,26 @@ func TestHandlerAppliesDelay(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	const delay = 40 * time.Millisecond
-	proxyServer := httptest.NewServer(newTestHandler(t, upstream.URL, delay))
-	defer proxyServer.Close()
+	const delay = 30 * time.Millisecond
+	handler := newTestHandler(t, upstream.URL, config.CORSPassthrough, []config.Rule{{
+		Name:    "slow",
+		Match:   "GET /api",
+		Enabled: true,
+		Latency: &config.LatencyConfig{Dist: "fixed", Value: delay},
+	}})
 
 	started := time.Now()
-	response, err := http.Get(proxyServer.URL)
-	if err != nil {
-		t.Fatalf("send request: %v", err)
-	}
-	response.Body.Close()
-
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "http://proxy.test/api", nil))
 	if elapsed := time.Since(started); elapsed < delay {
-		t.Errorf("elapsed time = %s, want at least %s", elapsed, delay)
+		t.Fatalf("elapsed = %s, want at least %s", elapsed, delay)
+	}
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", response.Code)
 	}
 }
 
-func TestHandlerStopsBeforeUpstreamWhenCanceled(t *testing.T) {
+func TestHandlerAppliesStatusFaultBeforeUpstream(t *testing.T) {
 	t.Parallel()
 
 	var upstreamRequests atomic.Int64
@@ -117,36 +91,93 @@ func TestHandlerStopsBeforeUpstreamWhenCanceled(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	request := httptest.NewRequest(http.MethodGet, "http://proxy.test/api", nil)
-	ctx, cancel := context.WithCancel(request.Context())
-	cancel()
-	request = request.WithContext(ctx)
+	handler := newTestHandler(t, upstream.URL, config.CORSReflect, []config.Rule{{
+		Name:    "unavailable",
+		Match:   "POST /orders",
+		Enabled: true,
+		Status:  &config.StatusConfig{Code: 503, Probability: 1, RetryAfter: 2},
+	}})
+	request := httptest.NewRequest(http.MethodPost, "http://proxy.test/orders", nil)
+	request.Header.Set("Origin", "http://localhost:3001")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
 
-	newTestHandler(t, upstream.URL, time.Second).ServeHTTP(httptest.NewRecorder(), request)
-	if got := upstreamRequests.Load(); got != 0 {
-		t.Fatalf("upstream requests = %d, want 0", got)
+	if response.Code != http.StatusServiceUnavailable || upstreamRequests.Load() != 0 {
+		t.Fatalf("status/upstream requests = %d/%d, want 503/0", response.Code, upstreamRequests.Load())
+	}
+	if response.Header().Get("Retry-After") != "2" {
+		t.Errorf("Retry-After = %q, want 2", response.Header().Get("Retry-After"))
+	}
+	if response.Header().Get("Access-Control-Allow-Origin") != "http://localhost:3001" {
+		t.Errorf("synthetic response did not reflect Origin")
+	}
+	if !strings.Contains(response.Body.String(), `"rule":"unavailable"`) {
+		t.Errorf("body = %q, want applied rule", response.Body.String())
 	}
 }
 
-func TestHandlerReturnsJSONBadGateway(t *testing.T) {
+func TestHandlerHangStopsOnRequestCancellation(t *testing.T) {
+	var upstreamRequests atomic.Int64
+	upstream := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		upstreamRequests.Add(1)
+	}))
+	defer upstream.Close()
+
+	handler := newTestHandler(t, upstream.URL, config.CORSPassthrough, []config.Rule{{
+		Name:    "hang",
+		Match:   "GET /profile",
+		Enabled: true,
+		Hang:    &config.HangConfig{Probability: 1},
+	}})
+	request := httptest.NewRequest(http.MethodGet, "http://proxy.test/profile", nil)
+	ctx, cancel := context.WithCancel(request.Context())
+	request = request.WithContext(ctx)
+
+	done := make(chan struct{})
+	go func() {
+		handler.ServeHTTP(httptest.NewRecorder(), request)
+		close(done)
+	}()
+	time.Sleep(10 * time.Millisecond)
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("hang did not stop after request cancellation")
+	}
+	if upstreamRequests.Load() != 0 {
+		t.Fatalf("upstream requests = %d, want 0", upstreamRequests.Load())
+	}
+}
+
+func TestHandlerTruncatesWithoutBuffering(t *testing.T) {
 	t.Parallel()
 
-	upstream := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	upstreamURL := upstream.URL
-	upstream.Close()
+	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Content-Length", "10")
+		_, _ = io.WriteString(writer, "0123456789")
+	}))
+	defer upstream.Close()
+	proxyServer := httptest.NewServer(newTestHandler(t, upstream.URL, config.CORSPassthrough, []config.Rule{{
+		Name:     "broken",
+		Match:    "GET /payload",
+		Enabled:  true,
+		Truncate: &config.TruncateConfig{Probability: 1, At: 0.5},
+	}}))
+	defer proxyServer.Close()
 
-	request := httptest.NewRequest(http.MethodGet, "http://proxy.test/api", nil)
-	response := httptest.NewRecorder()
-	newTestHandler(t, upstreamURL, 0).ServeHTTP(response, request)
-
-	if response.Code != http.StatusBadGateway {
-		t.Fatalf("status = %d, want %d", response.Code, http.StatusBadGateway)
+	response, err := http.Get(proxyServer.URL + "/payload")
+	if err != nil {
+		t.Fatalf("send request: %v", err)
 	}
-	if got := response.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
-		t.Errorf("Content-Type = %q, want JSON", got)
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
 	}
-	if got := response.Body.String(); got != "{\"error\":\"upstream unavailable\"}\n" {
-		t.Errorf("body = %q, want explicit upstream error", got)
+	if string(body) != "01234" {
+		t.Fatalf("body = %q, want truncated first half", body)
 	}
 }
 
@@ -162,28 +193,26 @@ func TestHandlerFlushesStreamingResponses(t *testing.T) {
 		_, _ = io.WriteString(writer, "data: second\n\n")
 	}))
 	defer upstream.Close()
-
-	proxyServer := httptest.NewServer(newTestHandler(t, upstream.URL, 0))
+	proxyServer := httptest.NewServer(newTestHandler(t, upstream.URL, config.CORSPassthrough, nil))
 	defer proxyServer.Close()
 
-	type result struct {
-		response *http.Response
-		err      error
-	}
-	responseResult := make(chan result, 1)
+	responseResult := make(chan *http.Response, 1)
+	errorResult := make(chan error, 1)
 	go func() {
 		response, err := http.Get(proxyServer.URL)
-		responseResult <- result{response: response, err: err}
+		if err != nil {
+			errorResult <- err
+			return
+		}
+		responseResult <- response
 	}()
 
 	var response *http.Response
 	select {
-	case got := <-responseResult:
-		if got.err != nil {
-			close(releaseUpstream)
-			t.Fatalf("send request: %v", got.err)
-		}
-		response = got.response
+	case response = <-responseResult:
+	case err := <-errorResult:
+		close(releaseUpstream)
+		t.Fatalf("send request: %v", err)
 	case <-time.After(time.Second):
 		close(releaseUpstream)
 		t.Fatal("response headers were buffered")
@@ -195,13 +224,13 @@ func TestHandlerFlushesStreamingResponses(t *testing.T) {
 		close(releaseUpstream)
 		t.Fatalf("read first streamed line: %v", err)
 	}
-	if firstLine != "data: first\n" {
-		t.Errorf("first line = %q, want first event", firstLine)
-	}
 	close(releaseUpstream)
+	if firstLine != "data: first\n" {
+		t.Fatalf("first line = %q, want first event", firstLine)
+	}
 }
 
-func TestHandlerLogsRequestOutcome(t *testing.T) {
+func TestHandlerLogsRuleFaultAndLatencies(t *testing.T) {
 	t.Parallel()
 
 	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
@@ -210,31 +239,52 @@ func TestHandlerLogsRequestOutcome(t *testing.T) {
 	defer upstream.Close()
 
 	var logs bytes.Buffer
-	logger := log.New(&logs, "", 0)
-	target, err := url.Parse(upstream.URL)
+	handler, err := proxy.NewHandler(&config.Config{
+		Target: upstream.URL,
+		CORS:   config.CORSPassthrough,
+		Rules: []config.Rule{{
+			Name:    "slow",
+			Match:   "GET /api",
+			Enabled: true,
+			Latency: &config.LatencyConfig{Dist: "fixed", Value: time.Millisecond},
+		}},
+	}, log.New(&logs, "", 0))
 	if err != nil {
-		t.Fatalf("parse upstream URL: %v", err)
+		t.Fatalf("NewHandler() unexpected error: %v", err)
 	}
-	handler := proxy.NewHandler(target, 0, logger)
-	handler.ServeHTTP(
-		httptest.NewRecorder(),
-		httptest.NewRequest(http.MethodPost, "http://proxy.test/orders", nil),
-	)
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "http://proxy.test/api", nil))
 
-	for _, field := range []string{"method=POST", `path="/orders"`, "upstream_status=201", "status=201", "duration="} {
+	for _, field := range []string{
+		`rule="slow"`, `faults="latency"`, "injected_latency_ms=1", "upstream_latency_ms=", "upstream_status=201", "status=201",
+	} {
 		if !strings.Contains(logs.String(), field) {
 			t.Errorf("log %q does not contain %q", logs.String(), field)
 		}
 	}
 }
 
-func newTestHandler(t *testing.T, upstreamURL string, delay time.Duration) http.Handler {
+func TestNewHandlerRejectsInvalidConfiguration(t *testing.T) {
+	t.Parallel()
+
+	if _, err := proxy.NewHandler(&config.Config{Target: "://invalid"}, log.New(io.Discard, "", 0)); err == nil {
+		t.Fatal("NewHandler() error = nil for invalid target")
+	}
+	if _, err := proxy.NewHandler(&config.Config{Target: "http://localhost"}, nil); err == nil {
+		t.Fatal("NewHandler() error = nil for nil logger")
+	}
+}
+
+func newTestHandler(t *testing.T, target string, cors config.CORSMode, configuredRules []config.Rule) http.Handler {
 	t.Helper()
 
-	target, err := url.Parse(upstreamURL)
+	handler, err := proxy.NewHandler(&config.Config{
+		Target: target,
+		Seed:   42,
+		CORS:   cors,
+		Rules:  configuredRules,
+	}, log.New(io.Discard, "", 0))
 	if err != nil {
-		t.Fatalf("parse upstream URL: %v", err)
+		t.Fatalf("NewHandler() unexpected error: %v", err)
 	}
-
-	return proxy.NewHandler(target, delay, log.New(io.Discard, "", 0))
+	return handler
 }

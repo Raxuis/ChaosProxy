@@ -3,141 +3,204 @@ package proxy
 
 import (
 	"context"
-	"io"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/http/httputil"
-	"net/url"
+	"sync/atomic"
 	"time"
+
+	"github.com/Raxuis/chaosproxy/internal/config"
+	"github.com/Raxuis/chaosproxy/internal/events"
+	"github.com/Raxuis/chaosproxy/internal/faults"
 )
 
-type requestMetrics struct {
-	upstreamStatus int
-	proxyError     error
+// Handler applies a request-captured runtime configuration without locking the
+// data-plane path.
+type Handler struct {
+	current      atomic.Pointer[runtimeConfig]
+	requestIndex atomic.Uint64
+	proxy        *httputil.ReverseProxy
+	logger       *log.Logger
 }
 
-type metricsContextKey struct{}
-
-type statusResponseWriter struct {
-	http.ResponseWriter
-	status int
+type requestState struct {
+	runtime      *runtimeConfig
+	request      *http.Request
+	chain        []faults.Fault
+	faultContext *faults.Context
+	metrics      requestMetrics
 }
 
-func (w *statusResponseWriter) WriteHeader(status int) {
-	if w.status != 0 {
+type requestStateKey struct{}
+
+// NewHandler validates and compiles configured before accepting requests.
+func NewHandler(configured *config.Config, logger *log.Logger) (*Handler, error) {
+	if logger == nil {
+		return nil, errors.New("logger must not be nil")
+	}
+	runtime, err := compileRuntime(configured)
+	if err != nil {
+		return nil, err
+	}
+
+	handler := &Handler{logger: logger}
+	handler.current.Store(runtime)
+	handler.proxy = &httputil.ReverseProxy{
+		Rewrite:        handler.rewrite,
+		ModifyResponse: handler.modifyResponse,
+		ErrorHandler:   handler.handleProxyError,
+		FlushInterval:  -1,
+	}
+	return handler, nil
+}
+
+// ServeHTTP captures one immutable runtime snapshot for the complete request.
+func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	started := time.Now()
+	runtime := handler.current.Load()
+	state := &requestState{runtime: runtime}
+	request = request.WithContext(context.WithValue(request.Context(), requestStateKey{}, state))
+	state.request = request
+	statusWriter := &statusResponseWriter{ResponseWriter: writer}
+	defer logRequest(handler.logger, request, &state.metrics, statusWriter, started)
+
+	if handlePreflight(statusWriter, request, runtime.cors) {
 		return
 	}
 
-	w.status = status
-	w.ResponseWriter.WriteHeader(status)
-}
-
-func (w *statusResponseWriter) Write(body []byte) (int, error) {
-	if w.status == 0 {
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return w.ResponseWriter.Write(body)
-}
-
-// Unwrap lets net/http retain optional response capabilities such as flushing
-// and connection hijacking when the writer is wrapped for status logging.
-func (w *statusResponseWriter) Unwrap() http.ResponseWriter {
-	return w.ResponseWriter
-}
-
-// NewHandler returns a streaming reverse proxy that applies delay before each
-// upstream request. Target and logger must remain valid for the handler lifetime.
-func NewHandler(target *url.URL, delay time.Duration, logger *log.Logger) http.Handler {
-	proxy := &httputil.ReverseProxy{
-		Rewrite: func(request *httputil.ProxyRequest) {
-			request.SetURL(target)
-			request.SetXForwarded()
-		},
-		ModifyResponse: func(response *http.Response) error {
-			metricsFromRequest(response.Request).upstreamStatus = response.StatusCode
-			return nil
-		},
-		ErrorHandler: func(writer http.ResponseWriter, request *http.Request, err error) {
-			metrics := metricsFromRequest(request)
-			metrics.proxyError = err
-
-			writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-			writer.Header().Set("Cache-Control", "no-store")
-			writer.WriteHeader(http.StatusBadGateway)
-			_, _ = io.WriteString(writer, "{\"error\":\"upstream unavailable\"}\n")
-		},
-		FlushInterval: -1,
-	}
-
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		started := time.Now()
-		metrics := &requestMetrics{}
-		request = request.WithContext(context.WithValue(request.Context(), metricsContextKey{}, metrics))
-		statusWriter := &statusResponseWriter{ResponseWriter: writer}
-
-		defer logRequest(logger, request, metrics, statusWriter, started)
-
-		if !waitForDelay(request.Context(), delay) {
-			return
+	index := handler.requestIndex.Add(1) - 1
+	matched := runtime.match.Match(request.Method, request.URL.Path)
+	if matched != nil {
+		state.metrics.rule = matched.Name
+		state.chain = runtime.chains[matched.Name]
+		state.faultContext = &faults.Context{
+			Req:  request,
+			Rng:  rand.New(rand.NewSource(deriveSeed(runtime.seed, index))),
+			Rule: matched.Name,
+			Emit: state.metrics.record,
 		}
 
-		proxy.ServeHTTP(statusWriter, request)
-	})
-}
-
-func waitForDelay(ctx context.Context, delay time.Duration) bool {
-	if delay <= 0 {
-		return true
+		shortCircuit, err := runBefore(state.faultContext, state.chain)
+		if err != nil {
+			if request.Context().Err() != nil {
+				return
+			}
+			state.metrics.pipelineError = err
+			writeJSONError(statusWriter, request, runtime.cors, http.StatusInternalServerError, "fault injection failed")
+			return
+		}
+		if shortCircuit != nil {
+			if shortCircuit.Hang {
+				<-request.Context().Done()
+				return
+			}
+			writeShortCircuit(statusWriter, request, runtime.cors, shortCircuit)
+			return
+		}
 	}
 
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-
-	select {
-	case <-timer.C:
-		return true
-	case <-ctx.Done():
-		return false
-	}
+	handler.proxy.ServeHTTP(statusWriter, request)
 }
 
-func logRequest(
-	logger *log.Logger,
+func (handler *Handler) rewrite(request *httputil.ProxyRequest) {
+	state := stateFromRequest(request.In)
+	state.metrics.upstreamStarted = time.Now()
+	request.SetURL(state.runtime.target)
+	request.SetXForwarded()
+}
+
+func (handler *Handler) modifyResponse(response *http.Response) error {
+	state := stateFromRequest(response.Request)
+	state.metrics.upstreamStatus = response.StatusCode
+	state.metrics.upstreamLatency = time.Since(state.metrics.upstreamStarted)
+
+	for _, fault := range state.chain {
+		if err := fault.After(state.faultContext, response); err != nil {
+			wrapped := fmt.Errorf("apply %s after hook: %w", fault.Name(), err)
+			state.metrics.pipelineError = wrapped
+			return wrapped
+		}
+	}
+	applyResponseCORS(response.Header, state.request, state.runtime.cors)
+	return nil
+}
+
+func (handler *Handler) handleProxyError(writer http.ResponseWriter, request *http.Request, err error) {
+	state := stateFromRequest(request)
+	state.metrics.proxyError = err
+	if !state.metrics.upstreamStarted.IsZero() && state.metrics.upstreamLatency == 0 {
+		state.metrics.upstreamLatency = time.Since(state.metrics.upstreamStarted)
+	}
+	writeJSONError(writer, request, state.runtime.cors, http.StatusBadGateway, "upstream unavailable")
+}
+
+func runBefore(ctx *faults.Context, chain []faults.Fault) (*faults.ShortCircuit, error) {
+	for _, fault := range chain {
+		shortCircuit, err := fault.Before(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("apply %s before hook: %w", fault.Name(), err)
+		}
+		if shortCircuit != nil {
+			return shortCircuit, nil
+		}
+	}
+	return nil, nil
+}
+
+func writeShortCircuit(
+	writer http.ResponseWriter,
 	request *http.Request,
-	metrics *requestMetrics,
-	writer *statusResponseWriter,
-	started time.Time,
+	mode config.CORSMode,
+	shortCircuit *faults.ShortCircuit,
 ) {
-	duration := time.Since(started).Round(time.Microsecond)
-	if metrics.proxyError != nil {
-		logger.Printf(
-			"method=%s path=%q upstream_status=%d status=%d duration=%s error=%q",
-			request.Method,
-			request.URL.RequestURI(),
-			metrics.upstreamStatus,
-			writer.status,
-			duration,
-			metrics.proxyError,
-		)
-		return
+	copyHeaders(writer.Header(), shortCircuit.Headers)
+	applyResponseCORS(writer.Header(), request, mode)
+	status := shortCircuit.Status
+	if status == 0 {
+		status = http.StatusInternalServerError
 	}
-
-	logger.Printf(
-		"method=%s path=%q upstream_status=%d status=%d duration=%s",
-		request.Method,
-		request.URL.RequestURI(),
-		metrics.upstreamStatus,
-		writer.status,
-		duration,
-	)
+	writer.WriteHeader(status)
+	if len(shortCircuit.Body) > 0 {
+		_, _ = writer.Write(shortCircuit.Body)
+	}
 }
 
-func metricsFromRequest(request *http.Request) *requestMetrics {
-	metrics, ok := request.Context().Value(metricsContextKey{}).(*requestMetrics)
-	if !ok {
-		return &requestMetrics{}
+func writeJSONError(writer http.ResponseWriter, request *http.Request, mode config.CORSMode, status int, message string) {
+	body, err := json.Marshal(struct {
+		Error string `json:"error"`
+	}{Error: message})
+	if err != nil {
+		body = []byte(`{"error":"internal error"}`)
 	}
+	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+	writer.Header().Set("Cache-Control", "no-store")
+	applyResponseCORS(writer.Header(), request, mode)
+	writer.WriteHeader(status)
+	_, _ = writer.Write(body)
+}
 
-	return metrics
+func copyHeaders(destination, source http.Header) {
+	for key, values := range source {
+		destination[key] = append([]string(nil), values...)
+	}
+}
+
+func stateFromRequest(request *http.Request) *requestState {
+	return request.Context().Value(requestStateKey{}).(*requestState)
+}
+
+func (metrics *requestMetrics) record(event events.Event) {
+	metrics.faults = append(metrics.faults, event.Faults...)
+	metrics.injectedLatencyMs += event.InjectedLatencyMs
+}
+
+func deriveSeed(seed int64, index uint64) int64 {
+	value := uint64(seed) + index + 0x9e3779b97f4a7c15
+	value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9
+	value = (value ^ (value >> 27)) * 0x94d049bb133111eb
+	return int64(value ^ (value >> 31))
 }

@@ -3,10 +3,20 @@ package config
 
 import "time"
 
+// CORSMode controls how the data plane handles cross-origin headers.
+type CORSMode string
+
+const (
+	CORSReflect     CORSMode = "reflect"
+	CORSPassthrough CORSMode = "passthrough"
+	CORSOff         CORSMode = "off"
+)
+
 // Config is the complete file-backed configuration.
 type Config struct {
 	Target string `json:"target" yaml:"target"`
 	Seed   int64  `json:"seed" yaml:"seed"`
+	CORS   CORSMode `json:"cors" yaml:"cors"`
 	Rules  []Rule `json:"rules" yaml:"rules"`
 
 	source sourceLocation
@@ -55,6 +65,7 @@ type TruncateConfig struct {
 type rawConfig struct {
 	Target string    `yaml:"target"`
 	Seed   int64     `yaml:"seed"`
+	CORS   CORSMode  `yaml:"cors"`
 	Rules  []rawRule `yaml:"rules"`
 }
 

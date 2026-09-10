@@ -51,6 +51,9 @@ rules:
 	if got.Seed != 42 {
 		t.Errorf("Seed = %d, want 42", got.Seed)
 	}
+	if got.CORS != config.CORSReflect {
+		t.Errorf("CORS = %q, want reflect default", got.CORS)
+	}
 	if len(got.Rules) != 4 {
 		t.Fatalf("len(Rules) = %d, want 4", len(got.Rules))
 	}

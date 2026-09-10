@@ -38,3 +38,9 @@ func shouldTrigger(rng *rand.Rand, probability float64) (bool, error) {
 	}
 	return rng.Float64() < probability, nil
 }
+
+func emit(ctx *Context, event Event) {
+	if ctx.Emit != nil {
+		ctx.Emit(event)
+	}
+}
