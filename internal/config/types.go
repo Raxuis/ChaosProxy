@@ -38,11 +38,11 @@ type Rule struct {
 
 // LatencyConfig configures a fixed or lognormal delay.
 type LatencyConfig struct {
-	Dist   string        `json:"dist" yaml:"dist"`
-	Value  time.Duration `json:"value,omitempty" yaml:"value,omitempty"`
-	Jitter time.Duration `json:"jitter,omitempty" yaml:"jitter,omitempty"`
-	P50    time.Duration `json:"p50,omitempty" yaml:"p50,omitempty"`
-	P99    time.Duration `json:"p99,omitempty" yaml:"p99,omitempty"`
+	Dist   string        `yaml:"dist"`
+	Value  time.Duration `yaml:"value,omitempty"`
+	Jitter time.Duration `yaml:"jitter,omitempty"`
+	P50    time.Duration `yaml:"p50,omitempty"`
+	P99    time.Duration `yaml:"p99,omitempty"`
 }
 
 // StatusConfig configures an injected HTTP response status.
