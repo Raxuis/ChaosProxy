@@ -89,6 +89,38 @@ func TestEventStreamSendsHistoryLiveEventsAndHeartbeats(t *testing.T) {
 	}
 }
 
+func TestEventStreamStopsOnShutdown(t *testing.T) {
+	t.Parallel()
+
+	bus := events.NewBus()
+	runtime, err := proxy.NewHandler(&config.Config{
+		Target: "http://127.0.0.1:1",
+		CORS:   config.CORSPassthrough,
+	}, log.New(io.Discard, "", 0))
+	if err != nil {
+		t.Fatalf("proxy.NewHandler() unexpected error: %v", err)
+	}
+	handler, err := NewHandler(bus, runtime)
+	if err != nil {
+		t.Fatalf("NewHandler() unexpected error: %v", err)
+	}
+
+	done := make(chan struct{})
+	go func() {
+		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "http://control.test/api/events", nil))
+		close(done)
+	}()
+	waitForSubscribers(t, bus, 1)
+	handler.BeginShutdown()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("SSE handler did not return after BeginShutdown")
+	}
+	waitForSubscribers(t, bus, 0)
+}
+
 func waitForSubscribers(t *testing.T, bus *events.Bus, want int) {
 	t.Helper()
 	deadline := time.Now().Add(time.Second)

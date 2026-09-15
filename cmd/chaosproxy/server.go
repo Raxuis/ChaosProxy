@@ -16,14 +16,16 @@ import (
 const shutdownTimeout = 10 * time.Second
 
 type serverOptions struct {
-	dataPort       int
-	controlPort    int
-	target         string
-	seed           int64
-	dataHandler    http.Handler
-	controlHandler http.Handler
-	watchConfig    func(context.Context) error
-	logger         *log.Logger
+	dataPort             int
+	controlPort          int
+	target               string
+	seed                 int64
+	dataHandler          http.Handler
+	controlHandler       http.Handler
+	beginDataShutdown    func()
+	beginControlShutdown func()
+	watchConfig          func(context.Context) error
+	logger               *log.Logger
 }
 
 type namedServer struct {
@@ -54,6 +56,12 @@ func run(options serverOptions) error {
 				ReadHeaderTimeout: 10 * time.Second,
 			},
 		},
+	}
+	if options.beginDataShutdown != nil {
+		servers[0].server.RegisterOnShutdown(options.beginDataShutdown)
+	}
+	if options.beginControlShutdown != nil {
+		servers[1].server.RegisterOnShutdown(options.beginControlShutdown)
 	}
 
 	applicationContext, cancelApplication := context.WithCancel(context.Background())

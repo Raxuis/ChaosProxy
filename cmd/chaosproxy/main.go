@@ -54,14 +54,16 @@ func main() {
 	}
 
 	if err := run(serverOptions{
-		dataPort:       opts.port,
-		controlPort:    opts.controlPort,
-		target:         configured.Target,
-		seed:           configured.Seed,
-		dataHandler:    handler,
-		controlHandler: controlHandler,
-		watchConfig:    watchConfig,
-		logger:         log.Default(),
+		dataPort:             opts.port,
+		controlPort:          opts.controlPort,
+		target:               configured.Target,
+		seed:                 configured.Seed,
+		dataHandler:          handler,
+		controlHandler:       controlHandler,
+		beginDataShutdown:    handler.BeginShutdown,
+		beginControlShutdown: controlHandler.BeginShutdown,
+		watchConfig:          watchConfig,
+		logger:               log.Default(),
 	}); err != nil {
 		log.Fatalf("chaosproxy stopped: %v", err)
 	}

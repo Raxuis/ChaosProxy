@@ -2,6 +2,7 @@
 package control
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -25,6 +26,8 @@ type Handler struct {
 	runtime   Runtime
 	heartbeat time.Duration
 	mux       *http.ServeMux
+	stopping  context.Context
+	stop      context.CancelFunc
 }
 
 // NewHandler creates a control-plane HTTP handler.
@@ -42,8 +45,14 @@ func NewHandler(bus *events.Bus, runtime Runtime) (*Handler, error) {
 		heartbeat: heartbeatInterval,
 		mux:       http.NewServeMux(),
 	}
+	handler.stopping, handler.stop = context.WithCancel(context.Background())
 	handler.routes()
 	return handler, nil
+}
+
+// BeginShutdown ends open event streams.
+func (handler *Handler) BeginShutdown() {
+	handler.stop()
 }
 
 // ServeHTTP dispatches control-plane requests.

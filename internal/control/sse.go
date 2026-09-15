@@ -35,6 +35,8 @@ func (handler *Handler) streamEvents(writer http.ResponseWriter, request *http.R
 		select {
 		case <-request.Context().Done():
 			return
+		case <-handler.stopping.Done():
+			return
 		case event, open := <-subscription.Events():
 			if !open || writeEvent(writer, event) != nil {
 				return

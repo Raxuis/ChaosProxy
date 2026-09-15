@@ -26,7 +26,11 @@ type Handler struct {
 	proxy        *httputil.ReverseProxy
 	logger       *log.Logger
 	publisher    EventPublisher
+	stopping     context.Context
+	stop         context.CancelFunc
 }
+
+var errShuttingDown = errors.New("proxy shutting down")
 
 type requestState struct {
 	runtime      *runtimeConfig
@@ -49,6 +53,7 @@ func NewHandler(configured *config.Config, logger *log.Logger, options ...Option
 	}
 
 	handler := &Handler{logger: logger}
+	handler.stopping, handler.stop = context.WithCancel(context.Background())
 	for _, option := range options {
 		if option == nil {
 			return nil, errors.New("handler option must not be nil")
@@ -84,10 +89,13 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	index := handler.requestIndex.Add(1) - 1
 	matched := runtime.match.Match(request.Method, request.URL.Path)
 	if matched != nil {
+		faultRequest, releaseFaultRequest := handler.withShutdownCancel(request)
+		defer releaseFaultRequest()
+
 		state.metrics.rule = matched.Name
 		state.chain = runtime.chains[matched.Name]
 		state.faultContext = &faults.Context{
-			Req:  request,
+			Req:  faultRequest,
 			Rng:  rand.New(rand.NewSource(deriveSeed(runtime.seed, index))),
 			Rule: matched.Name,
 			Emit: state.metrics.record,
@@ -98,13 +106,20 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 			if request.Context().Err() != nil {
 				return
 			}
+			if handler.stopping.Err() != nil {
+				rejectDuringShutdown(statusWriter, state)
+				return
+			}
 			state.metrics.pipelineError = err
 			writeJSONError(statusWriter, request, runtime.cors, http.StatusInternalServerError, "fault injection failed")
 			return
 		}
 		if shortCircuit != nil {
 			if shortCircuit.Hang {
-				<-request.Context().Done()
+				<-faultRequest.Context().Done()
+				if request.Context().Err() == nil {
+					rejectDuringShutdown(statusWriter, state)
+				}
 				return
 			}
 			writeShortCircuit(statusWriter, request, runtime.cors, shortCircuit)
@@ -113,6 +128,26 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	}
 
 	handler.proxy.ServeHTTP(statusWriter, request)
+}
+
+// BeginShutdown interrupts injected hang and latency waits.
+func (handler *Handler) BeginShutdown() {
+	handler.stop()
+}
+
+func (handler *Handler) withShutdownCancel(request *http.Request) (*http.Request, func()) {
+	ctx, cancel := context.WithCancel(request.Context())
+	stopWatching := context.AfterFunc(handler.stopping, cancel)
+	return request.WithContext(ctx), func() {
+		stopWatching()
+		cancel()
+	}
+}
+
+func rejectDuringShutdown(writer http.ResponseWriter, state *requestState) {
+	state.metrics.pipelineError = errShuttingDown
+	writer.Header().Set("Connection", "close")
+	writeJSONError(writer, state.request, state.runtime.cors, http.StatusServiceUnavailable, "chaosproxy is shutting down")
 }
 
 func (handler *Handler) rewrite(request *httputil.ProxyRequest) {
