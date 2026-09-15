@@ -1,0 +1,8 @@
+#!/bin/sh
+unformatted=$(git ls-files -z '*.go' | xargs -0 gofmt -l)
+if [ -n "$unformatted" ]; then
+	echo "gofmt: these files are not formatted:"
+	echo "$unformatted"
+	echo "Run 'gofmt -w .' and commit before pushing."
+	exit 1
+fi
