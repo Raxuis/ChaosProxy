@@ -69,6 +69,7 @@ func NewHandler(configured *config.Config, logger *log.Logger, options ...Option
 		Rewrite:        handler.rewrite,
 		ModifyResponse: handler.modifyResponse,
 		ErrorHandler:   handler.handleProxyError,
+		ErrorLog:       logger,
 		FlushInterval:  -1,
 	}
 	return handler, nil

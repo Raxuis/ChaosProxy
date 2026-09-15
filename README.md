@@ -67,6 +67,16 @@ POST /api/reset
 
 Press Ctrl+C to stop the server gracefully.
 
+## Truncation
+
+`truncate` sends the first `at` fraction of the body, then aborts the
+connection, so clients see a network error such as `unexpected EOF` instead of
+a short but valid response. The declared `Content-Length` is kept. Responses
+without a length (chunked, compressed or streamed) are buffered up to 1 MiB to
+compute the cut, and longer ones are cut at `at` of that first MiB. Avoid
+truncate rules on endless streams such as Server-Sent Events: nothing is sent
+until 1 MiB has arrived.
+
 ## Reproducibility
 
 Each rule draws its decisions from the seed, the rule name, and the number of

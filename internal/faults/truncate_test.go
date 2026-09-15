@@ -1,6 +1,7 @@
 package faults
 
 import (
+	"errors"
 	"io"
 	"math"
 	"net/http"
@@ -30,12 +31,8 @@ func (body *trackingReadCloser) Close() error {
 	return nil
 }
 
-func TestTruncateAfterWrapsBodyWithoutBuffering(t *testing.T) {
-	fault, err := newTruncateFault(config.TruncateConfig{Probability: 1, At: 0.5})
-	if err != nil {
-		t.Fatalf("newTruncateFault() unexpected error: %v", err)
-	}
-
+func TestTruncateKeepsDeclaredLengthAndFailsAfterCut(t *testing.T) {
+	fault := newTestTruncateFault(t, 0.5)
 	body := newTrackingReadCloser("0123456789")
 	response := &http.Response{
 		Body:          body,
@@ -46,15 +43,15 @@ func TestTruncateAfterWrapsBodyWithoutBuffering(t *testing.T) {
 		t.Fatalf("After() unexpected error: %v", err)
 	}
 	if body.reads != 0 {
-		t.Fatalf("After() read the body %d times, want zero", body.reads)
+		t.Fatalf("After() read a body of known length %d times, want zero", body.reads)
 	}
-	if response.ContentLength != -1 || response.Header.Get("Content-Length") != "" {
-		t.Errorf("Content-Length = (%d, %q), want removed", response.ContentLength, response.Header.Get("Content-Length"))
+	if response.ContentLength != 10 || response.Header.Get("Content-Length") != "10" {
+		t.Errorf("Content-Length = (%d, %q), want declared length kept", response.ContentLength, response.Header.Get("Content-Length"))
 	}
 
 	got, err := io.ReadAll(response.Body)
-	if err != nil {
-		t.Fatalf("read wrapped body: %v", err)
+	if !errors.Is(err, errTruncated) {
+		t.Fatalf("read error = %v, want errTruncated", err)
 	}
 	if string(got) != "01234" {
 		t.Errorf("truncated body = %q, want first half", got)
@@ -67,35 +64,58 @@ func TestTruncateAfterWrapsBodyWithoutBuffering(t *testing.T) {
 	}
 }
 
-func TestTruncateLeavesUnknownLengthStreaming(t *testing.T) {
-	fault, err := newTruncateFault(config.TruncateConfig{Probability: 1, At: 0.5})
-	if err != nil {
-		t.Fatalf("newTruncateFault() unexpected error: %v", err)
+func TestTruncateBuffersUnknownLength(t *testing.T) {
+	fault := newTestTruncateFault(t, 0.5)
+	response := &http.Response{Body: newTrackingReadCloser("0123456789"), ContentLength: -1, Header: make(http.Header)}
+
+	if err := fault.After(newFaultContext(), response); err != nil {
+		t.Fatalf("After() unexpected error: %v", err)
 	}
-	body := newTrackingReadCloser("stream")
+	got, err := io.ReadAll(response.Body)
+	if !errors.Is(err, errTruncated) {
+		t.Fatalf("read error = %v, want errTruncated", err)
+	}
+	if string(got) != "01234" {
+		t.Errorf("truncated body = %q, want first half", got)
+	}
+}
+
+func TestTruncateCapsBufferingOfUnknownLength(t *testing.T) {
+	fault := newTestTruncateFault(t, 0.25)
+	body := newTrackingReadCloser(strings.Repeat("x", 3*maxBufferedTruncation))
 	response := &http.Response{Body: body, ContentLength: -1, Header: make(http.Header)}
 
 	if err := fault.After(newFaultContext(), response); err != nil {
 		t.Fatalf("After() unexpected error: %v", err)
 	}
-	if response.Body != body || body.reads != 0 {
-		t.Fatal("unknown-length stream should remain untouched")
+	got, err := io.ReadAll(response.Body)
+	if !errors.Is(err, errTruncated) {
+		t.Fatalf("read error = %v, want errTruncated", err)
+	}
+	if len(got) != maxBufferedTruncation/4 {
+		t.Errorf("truncated length = %d, want %d", len(got), maxBufferedTruncation/4)
 	}
 }
 
-func TestTruncateProbabilityZeroDoesNotModifyResponse(t *testing.T) {
-	fault, err := newTruncateFault(config.TruncateConfig{Probability: 0, At: 0.5})
-	if err != nil {
-		t.Fatalf("newTruncateFault() unexpected error: %v", err)
+func TestTruncateLeavesResponseUntouched(t *testing.T) {
+	tests := map[string]config.TruncateConfig{
+		"probability zero": {Probability: 0, At: 0.5},
+		"at one":           {Probability: 1, At: 1},
 	}
-	body := newTrackingReadCloser("body")
-	response := &http.Response{Body: body, ContentLength: 4, Header: http.Header{"Content-Length": []string{"4"}}}
+	for name, configured := range tests {
+		fault, err := newTruncateFault(configured)
+		if err != nil {
+			t.Fatalf("%s: newTruncateFault() unexpected error: %v", name, err)
+		}
+		body := newTrackingReadCloser("body")
+		response := &http.Response{Body: body, ContentLength: -1, Header: make(http.Header)}
 
-	if err := fault.After(newFaultContext(), response); err != nil {
-		t.Fatalf("After() unexpected error: %v", err)
-	}
-	if response.Body != body || response.ContentLength != 4 {
-		t.Fatal("non-triggered truncate fault modified response")
+		if err := fault.After(newFaultContext(), response); err != nil {
+			t.Fatalf("%s: After() unexpected error: %v", name, err)
+		}
+		if response.Body != body || body.reads != 0 {
+			t.Errorf("%s: response was modified", name)
+		}
 	}
 }
 
@@ -112,4 +132,13 @@ func TestTruncateConfigurationErrors(t *testing.T) {
 			t.Errorf("newTruncateFault(%+v) error = nil", configured)
 		}
 	}
+}
+
+func newTestTruncateFault(t *testing.T, at float64) *truncateFault {
+	t.Helper()
+	fault, err := newTruncateFault(config.TruncateConfig{Probability: 1, At: at})
+	if err != nil {
+		t.Fatalf("newTruncateFault() unexpected error: %v", err)
+	}
+	return fault
 }

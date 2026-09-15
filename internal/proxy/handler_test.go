@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -151,33 +152,62 @@ func TestHandlerHangStopsOnRequestCancellation(t *testing.T) {
 	}
 }
 
-func TestHandlerTruncatesWithoutBuffering(t *testing.T) {
+func TestHandlerTruncationAbortsConnection(t *testing.T) {
 	t.Parallel()
 
-	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
-		writer.Header().Set("Content-Length", "10")
-		_, _ = io.WriteString(writer, "0123456789")
-	}))
-	defer upstream.Close()
-	proxyServer := httptest.NewServer(newTestHandler(t, upstream.URL, config.CORSPassthrough, []config.Rule{{
-		Name:     "broken",
-		Match:    "GET /payload",
-		Enabled:  true,
-		Truncate: &config.TruncateConfig{Probability: 1, At: 0.5},
-	}}))
-	defer proxyServer.Close()
+	tests := []struct {
+		name       string
+		upstream   http.HandlerFunc
+		wantLength int64
+	}{
+		{
+			name: "declared length",
+			upstream: func(writer http.ResponseWriter, _ *http.Request) {
+				writer.Header().Set("Content-Length", "10")
+				_, _ = io.WriteString(writer, "0123456789")
+			},
+			wantLength: 10,
+		},
+		{
+			name: "chunked",
+			upstream: func(writer http.ResponseWriter, _ *http.Request) {
+				_, _ = io.WriteString(writer, "01234")
+				_ = http.NewResponseController(writer).Flush()
+				_, _ = io.WriteString(writer, "56789")
+			},
+			wantLength: -1,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
-	response, err := http.Get(proxyServer.URL + "/payload")
-	if err != nil {
-		t.Fatalf("send request: %v", err)
-	}
-	defer response.Body.Close()
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		t.Fatalf("read response: %v", err)
-	}
-	if string(body) != "01234" {
-		t.Fatalf("body = %q, want truncated first half", body)
+			upstream := httptest.NewServer(test.upstream)
+			defer upstream.Close()
+			proxyServer := httptest.NewServer(newTestHandler(t, upstream.URL, config.CORSPassthrough, []config.Rule{{
+				Name:     "broken",
+				Match:    "GET /payload",
+				Enabled:  true,
+				Truncate: &config.TruncateConfig{Probability: 1, At: 0.5},
+			}}))
+			defer proxyServer.Close()
+
+			response, err := http.Get(proxyServer.URL + "/payload")
+			if err != nil {
+				t.Fatalf("send request: %v", err)
+			}
+			defer response.Body.Close()
+			if response.ContentLength != test.wantLength {
+				t.Errorf("ContentLength = %d, want %d", response.ContentLength, test.wantLength)
+			}
+			body, err := io.ReadAll(response.Body)
+			if !errors.Is(err, io.ErrUnexpectedEOF) {
+				t.Fatalf("read error = %v, want io.ErrUnexpectedEOF", err)
+			}
+			if string(body) != "01234" {
+				t.Fatalf("body = %q, want truncated first half", body)
+			}
+		})
 	}
 }
 
