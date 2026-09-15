@@ -45,3 +45,5 @@ examples/              ready-to-use profiles and integrations
 4. Phase 3: add deterministic CI behavior, scenarios, mutation, and integrations.
 5. Phase 4: package and document the tool.
 6. Launch: produce the demonstration and publish with empirical evidence.
+
+Task scope, checks, and approval state are tracked in [PROGRESS.md](../PROGRESS.md).

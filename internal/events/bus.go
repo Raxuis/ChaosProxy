@@ -1,6 +1,8 @@
 package events
 
 import (
+	"maps"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -10,12 +12,22 @@ const (
 	subscriberBuffer = 128
 )
 
-// Stats describes the current in-memory event bus state.
+// Stats describes the current in-memory event bus state and request totals.
 type Stats struct {
-	Published   uint64 `json:"published"`
-	Dropped     uint64 `json:"dropped"`
-	Subscribers int    `json:"subscribers"`
-	History     int    `json:"history"`
+	Published   uint64               `json:"published"`
+	Faulted     uint64               `json:"faulted"`
+	Dropped     uint64               `json:"dropped"`
+	Subscribers int                  `json:"subscribers"`
+	History     int                  `json:"history"`
+	Statuses    map[string]uint64    `json:"statuses"`
+	Rules       map[string]RuleStats `json:"rules"`
+}
+
+// RuleStats counts the requests one rule matched and the faults it injected.
+type RuleStats struct {
+	Matched uint64            `json:"matched"`
+	Faulted uint64            `json:"faulted"`
+	Faults  map[string]uint64 `json:"faults"`
 }
 
 // Bus retains recent events and fans out new events without waiting for
@@ -27,13 +39,20 @@ type Bus struct {
 	historySize int
 	nextID      uint64
 	published   uint64
+	faulted     uint64
 	dropped     uint64
+	statuses    map[string]uint64
+	rules       map[string]*RuleStats
 	subscribers map[*Subscription]struct{}
 }
 
 // NewBus creates an empty event bus.
 func NewBus() *Bus {
-	return &Bus{subscribers: make(map[*Subscription]struct{})}
+	return &Bus{
+		statuses:    make(map[string]uint64),
+		rules:       make(map[string]*RuleStats),
+		subscribers: make(map[*Subscription]struct{}),
+	}
 }
 
 // Publish records and broadcasts event. A full subscriber buffer loses its
@@ -50,6 +69,7 @@ func (b *Bus) Publish(event Event) {
 	b.nextID++
 	event.ID = b.nextID
 	b.published++
+	b.count(event)
 	b.appendHistory(event)
 	for subscription := range b.subscribers {
 		b.publishTo(subscription, event)
@@ -75,11 +95,18 @@ func (b *Bus) Subscribe() *Subscription {
 func (b *Bus) Stats() Stats {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	rules := make(map[string]RuleStats, len(b.rules))
+	for name, rule := range b.rules {
+		rules[name] = RuleStats{Matched: rule.Matched, Faulted: rule.Faulted, Faults: maps.Clone(rule.Faults)}
+	}
 	return Stats{
 		Published:   b.published,
+		Faulted:     b.faulted,
 		Dropped:     b.dropped,
 		Subscribers: len(b.subscribers),
 		History:     b.historySize,
+		Statuses:    maps.Clone(b.statuses),
+		Rules:       rules,
 	}
 }
 
@@ -93,11 +120,45 @@ func (b *Bus) Reset() {
 	b.historySize = 0
 	b.nextID = 0
 	b.published = 0
+	b.faulted = 0
 	b.dropped = 0
+	b.statuses = make(map[string]uint64)
+	b.rules = make(map[string]*RuleStats)
 	for subscription := range b.subscribers {
 		drain(subscription.events)
 		subscription.dropped.Store(0)
 	}
+}
+
+func (b *Bus) count(event Event) {
+	b.statuses[statusClass(event.Status)]++
+	if len(event.Faults) > 0 {
+		b.faulted++
+	}
+	if event.Rule == "" {
+		return
+	}
+
+	rule, found := b.rules[event.Rule]
+	if !found {
+		rule = &RuleStats{Faults: make(map[string]uint64)}
+		b.rules[event.Rule] = rule
+	}
+	rule.Matched++
+	if len(event.Faults) > 0 {
+		rule.Faulted++
+	}
+	for _, fault := range event.Faults {
+		rule.Faults[fault]++
+	}
+}
+
+// Status 0 means the response never started, for example a hang the client abandoned.
+func statusClass(status int) string {
+	if status < 100 || status > 599 {
+		return "aborted"
+	}
+	return strconv.Itoa(status/100) + "xx"
 }
 
 func (b *Bus) appendHistory(event Event) {

@@ -12,6 +12,8 @@ reload, reproducible seeded decisions, browser-safe CORS handling, and a control
 plane with a live event stream. An embedded web UI, scenario mode and CI
 integrations are planned.
 
+See [PROGRESS.md](PROGRESS.md) for the roadmap and the status of each task.
+
 ## Local development
 
 Requirements:
@@ -59,12 +61,19 @@ At least one of `--config` or `--target` is required.
 Control-plane endpoints:
 
 ```text
+GET  /
 GET  /healthz
+GET  /api/stats
 GET  /api/events
 GET  /api/config
 PUT  /api/rules/{name}  body: {"enabled": false}
 POST /api/reset
 ```
+
+Open `http://localhost:7071/` for the dashboard. It shows the target and seed,
+request totals, a ribbon of the last 120 requests, every rule with its toggle
+and trigger counts, and a live request feed. Press `/` to filter the feed and
+`p` to pause it. The dashboard works offline and loads nothing from the network.
 
 A rule toggled through `PUT /api/rules/{name}` keeps its state across
 configuration reloads until the file changes that rule's `enabled` value or

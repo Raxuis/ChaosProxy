@@ -5,11 +5,13 @@ Bug reports, fixes and focused features are welcome.
 ## Before you start
 
 Open an issue before a large change so the approach can be agreed on first.
-Small fixes can go straight to a pull request.
+Small fixes can go straight to a pull request. Planned work and its status are
+tracked in [PROGRESS.md](PROGRESS.md).
 
 ## Development setup
 
-Requirements: Go 1.25 or newer and Git.
+Requirements: Go 1.25 or newer, Git, and Node.js 20 or newer to test the
+dashboard logic. The dashboard itself has no build step and no dependencies.
 
 ```sh
 git clone https://github.com/Raxuis/ChaosProxy.git
@@ -30,6 +32,7 @@ go vet ./...
 go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
 go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
 go test -race -count=1 ./...
+node --test web/feed.test.js
 ```
 
 ## Code guidelines

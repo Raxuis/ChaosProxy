@@ -2,6 +2,7 @@ package events_test
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -91,7 +92,8 @@ func TestBusResetClearsRuntimeState(t *testing.T) {
 	}
 	bus.Reset()
 
-	if got := bus.Stats(); got.Published != 0 || got.Dropped != 0 || got.History != 0 || got.Subscribers != 1 {
+	if got := bus.Stats(); got.Published != 0 || got.Faulted != 0 || got.Dropped != 0 || got.History != 0 ||
+		got.Subscribers != 1 || len(got.Statuses) != 0 || len(got.Rules) != 0 {
 		t.Fatalf("stats after reset = %+v", got)
 	}
 	if got := subscription.Dropped(); got != 0 {
@@ -106,6 +108,37 @@ func TestBusResetClearsRuntimeState(t *testing.T) {
 	bus.Publish(events.Event{Path: "/after-reset"})
 	if got := (<-subscription.Events()).ID; got != 1 {
 		t.Fatalf("event ID after reset = %d, want 1", got)
+	}
+}
+
+func TestBusAggregatesRequestTotals(t *testing.T) {
+	t.Parallel()
+
+	bus := events.NewBus()
+	bus.Publish(events.Event{Rule: "orders", Faults: []string{"latency", "status"}, Status: 503})
+	bus.Publish(events.Event{Rule: "orders", Status: 200})
+	bus.Publish(events.Event{Status: 204})
+	bus.Publish(events.Event{Rule: "profile", Faults: []string{"hang"}})
+
+	got := bus.Stats()
+	want := events.Stats{
+		Published: 4,
+		Faulted:   2,
+		History:   4,
+		Statuses:  map[string]uint64{"5xx": 1, "2xx": 2, "aborted": 1},
+		Rules: map[string]events.RuleStats{
+			"orders":  {Matched: 2, Faulted: 1, Faults: map[string]uint64{"latency": 1, "status": 1}},
+			"profile": {Matched: 1, Faulted: 1, Faults: map[string]uint64{"hang": 1}},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("stats = %+v, want %+v", got, want)
+	}
+
+	got.Statuses["2xx"] = 99
+	got.Rules["orders"].Faults["status"] = 99
+	if again := bus.Stats(); again.Statuses["2xx"] != 2 || again.Rules["orders"].Faults["status"] != 1 {
+		t.Fatalf("mutating a stats snapshot changed the bus: %+v", again)
 	}
 }
 

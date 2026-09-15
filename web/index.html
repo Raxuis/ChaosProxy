@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>chaosproxy control</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#traffic">Skip to live traffic</a>
+
+  <header class="bar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <span class="wordmark">chaosproxy</span>
+    </div>
+    <dl class="meta">
+      <div><dt>target</dt><dd id="target">-</dd></div>
+      <div><dt>seed</dt><dd id="seed">-</dd></div>
+      <div><dt>cors</dt><dd id="cors">-</dd></div>
+    </dl>
+    <div class="actions">
+      <p class="link" id="link" role="status" data-state="connecting">
+        <span class="dot" aria-hidden="true"></span><span id="link-label">connecting</span>
+      </p>
+      <button type="button" class="btn" id="pause" aria-pressed="false" aria-keyshortcuts="p">Pause</button>
+      <button type="button" class="btn btn-quiet" id="reset">Reset</button>
+    </div>
+  </header>
+
+  <div class="ribbon" id="ribbon" role="img" aria-label="No requests yet"></div>
+
+  <main>
+    <p class="notice" id="notice" role="alert" hidden></p>
+
+    <section class="counters" aria-label="Totals since the last reset">
+      <p class="counter"><span class="label">requests</span><span class="value" id="count-requests">0</span></p>
+      <p class="counter is-accent"><span class="label">injected</span><span class="value" id="count-injected">0</span></p>
+      <p class="counter is-accent"><span class="label">fault rate</span><span class="value" id="count-rate">0%</span></p>
+      <p class="counter is-danger"><span class="label">5xx</span><span class="value" id="count-5xx">0</span></p>
+      <p class="counter"><span class="label">aborted</span><span class="value" id="count-aborted">0</span></p>
+      <p class="counter"><span class="label">dropped events</span><span class="value" id="count-dropped">0</span></p>
+    </section>
+
+    <div class="workspace">
+      <section class="rules" aria-labelledby="rules-title">
+        <h2 id="rules-title">Rules</h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col"><span class="sr">Inject</span></th>
+              <th scope="col">rule</th>
+              <th scope="col" class="num">matched</th>
+              <th scope="col" class="num">injected</th>
+            </tr>
+          </thead>
+          <tbody id="rules"></tbody>
+        </table>
+        <p class="empty" id="rules-empty" hidden>No rules configured. Every request is forwarded unchanged.</p>
+      </section>
+
+      <section class="traffic" id="traffic" aria-labelledby="traffic-title" tabindex="-1">
+        <div class="traffic-head">
+          <h2 id="traffic-title">Live traffic</h2>
+          <form class="filters" id="filters" role="search">
+            <label class="field">
+              <span class="sr">Filter by path, rule or method</span>
+              <input id="filter-text" type="search" placeholder="filter path or rule  /" autocomplete="off" spellcheck="false" aria-keyshortcuts="/">
+            </label>
+            <label class="field">
+              <span class="sr">Status class</span>
+              <select id="filter-status">
+                <option value="">all statuses</option>
+                <option value="2xx">2xx</option>
+                <option value="3xx">3xx</option>
+                <option value="4xx">4xx</option>
+                <option value="5xx">5xx</option>
+                <option value="aborted">aborted</option>
+              </select>
+            </label>
+            <label class="check"><input id="filter-injected" type="checkbox"> injected only</label>
+          </form>
+        </div>
+        <p class="buffer" id="buffer" role="status" hidden></p>
+        <div class="feed-scroll">
+          <table class="feed">
+            <thead>
+              <tr>
+                <th scope="col">time</th>
+                <th scope="col">method</th>
+                <th scope="col">path</th>
+                <th scope="col">rule</th>
+                <th scope="col">faults</th>
+                <th scope="col" class="num">latency</th>
+                <th scope="col" class="num">bytes</th>
+                <th scope="col" class="num">status</th>
+              </tr>
+            </thead>
+            <tbody id="feed"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="feed-empty">Waiting for requests on the data plane.</p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

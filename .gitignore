@@ -20,7 +20,3 @@
 .idea/
 .vscode/
 *.swp
-
-# Local planning notes
-/PROGRESS.md
-/docs/progress/

@@ -82,7 +82,9 @@ func allowedHost(hostport string) bool {
 }
 
 func (h *Handler) routes() {
+	h.mux.Handle("GET /", dashboard())
 	h.mux.HandleFunc("GET /healthz", h.health)
+	h.mux.HandleFunc("GET /api/stats", h.getStats)
 	h.mux.HandleFunc("GET /api/events", h.streamEvents)
 	h.mux.HandleFunc("GET /api/config", h.getConfig)
 	h.mux.HandleFunc("PUT /api/rules/{name}", h.setRuleEnabled)

@@ -30,6 +30,8 @@ jobs:
         run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+      - name: dashboard tests
+        run: node --test web/feed.test.js
 
   test:
     strategy:
