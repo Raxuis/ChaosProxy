@@ -156,6 +156,7 @@ func TestHandlerUpdateKeepsLastRuntimeOnCompileError(t *testing.T) {
 
 	err = handler.Update(&config.Config{
 		Target: upstream.URL,
+		CORS:   config.CORSPassthrough,
 		Rules: []config.Rule{{
 			Name:    "broken",
 			Match:   "not-a-path",

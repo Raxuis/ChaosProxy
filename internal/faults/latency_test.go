@@ -12,14 +12,11 @@ import (
 )
 
 func TestLatencyFixedSamples(t *testing.T) {
-	fault, err := newLatencyFault(config.LatencyConfig{
+	fault := newLatencyFault(config.LatencyConfig{
 		Dist:   "fixed",
 		Value:  100 * time.Millisecond,
 		Jitter: 25 * time.Millisecond,
 	})
-	if err != nil {
-		t.Fatalf("newLatencyFault() unexpected error: %v", err)
-	}
 
 	rng := rand.New(rand.NewSource(42))
 	for index := 0; index < 1_000; index++ {
@@ -38,10 +35,7 @@ func TestLatencyLognormalParametersAndSampling(t *testing.T) {
 		p50 = 400 * time.Millisecond
 		p99 = 3 * time.Second
 	)
-	fault, err := newLatencyFault(config.LatencyConfig{Dist: "lognormal", P50: p50, P99: p99})
-	if err != nil {
-		t.Fatalf("newLatencyFault() unexpected error: %v", err)
-	}
+	fault := newLatencyFault(config.LatencyConfig{Dist: "lognormal", P50: p50, P99: p99})
 
 	derivedP50 := time.Duration(math.Exp(fault.mu))
 	if difference := derivedP50 - p50; difference < -time.Nanosecond || difference > time.Nanosecond {
@@ -67,10 +61,7 @@ func TestLatencyLognormalParametersAndSampling(t *testing.T) {
 
 func TestLatencyLognormalWithEqualPercentilesIsExact(t *testing.T) {
 	const duration = 400 * time.Millisecond
-	fault, err := newLatencyFault(config.LatencyConfig{Dist: "lognormal", P50: duration, P99: duration})
-	if err != nil {
-		t.Fatalf("newLatencyFault() unexpected error: %v", err)
-	}
+	fault := newLatencyFault(config.LatencyConfig{Dist: "lognormal", P50: duration, P99: duration})
 
 	sample, err := fault.sample(rand.New(rand.NewSource(42)))
 	if err != nil {
@@ -82,10 +73,7 @@ func TestLatencyLognormalWithEqualPercentilesIsExact(t *testing.T) {
 }
 
 func TestLatencyBeforeHonorsCancellation(t *testing.T) {
-	fault, err := newLatencyFault(config.LatencyConfig{Dist: "fixed", Value: time.Hour})
-	if err != nil {
-		t.Fatalf("newLatencyFault() unexpected error: %v", err)
-	}
+	fault := newLatencyFault(config.LatencyConfig{Dist: "fixed", Value: time.Hour})
 
 	faultContext := newFaultContext()
 	canceled, cancel := context.WithCancel(faultContext.Req.Context())
@@ -110,32 +98,8 @@ func TestLatencyBeforeHonorsCancellation(t *testing.T) {
 	}
 }
 
-func TestLatencyConfigurationErrors(t *testing.T) {
-	tests := []struct {
-		name       string
-		configured config.LatencyConfig
-	}{
-		{name: "unknown distribution", configured: config.LatencyConfig{Dist: "normal"}},
-		{name: "negative value", configured: config.LatencyConfig{Dist: "fixed", Value: -1}},
-		{name: "negative jitter", configured: config.LatencyConfig{Dist: "fixed", Jitter: -1}},
-		{name: "missing percentiles", configured: config.LatencyConfig{Dist: "lognormal"}},
-		{name: "reversed percentiles", configured: config.LatencyConfig{Dist: "lognormal", P50: time.Second, P99: time.Millisecond}},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if _, err := newLatencyFault(test.configured); err == nil {
-				t.Fatalf("newLatencyFault(%+v) error = nil", test.configured)
-			}
-		})
-	}
-}
-
 func TestLatencyRequiresRequestContext(t *testing.T) {
-	fault, err := newLatencyFault(config.LatencyConfig{Dist: "fixed"})
-	if err != nil {
-		t.Fatalf("newLatencyFault() unexpected error: %v", err)
-	}
+	fault := newLatencyFault(config.LatencyConfig{Dist: "fixed"})
 	if _, err := fault.Before(nil); err == nil {
 		t.Fatal("Before(nil) error = nil")
 	}

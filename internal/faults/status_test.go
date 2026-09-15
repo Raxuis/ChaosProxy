@@ -2,7 +2,6 @@ package faults
 
 import (
 	"encoding/json"
-	"math"
 	"net/http"
 	"testing"
 
@@ -10,14 +9,11 @@ import (
 )
 
 func TestStatusBeforeReturnsSyntheticResponse(t *testing.T) {
-	fault, err := newStatusFault(config.StatusConfig{
+	fault := newStatusFault(config.StatusConfig{
 		Code:        http.StatusServiceUnavailable,
 		Probability: 1,
 		RetryAfter:  2,
 	})
-	if err != nil {
-		t.Fatalf("newStatusFault() unexpected error: %v", err)
-	}
 
 	shortCircuit, err := fault.Before(newFaultContext())
 	if err != nil {
@@ -46,27 +42,9 @@ func TestStatusBeforeReturnsSyntheticResponse(t *testing.T) {
 }
 
 func TestStatusProbabilityZeroDoesNotTrigger(t *testing.T) {
-	fault, err := newStatusFault(config.StatusConfig{Code: 503, Probability: 0})
-	if err != nil {
-		t.Fatalf("newStatusFault() unexpected error: %v", err)
-	}
+	fault := newStatusFault(config.StatusConfig{Code: 503, Probability: 0})
 	shortCircuit, err := fault.Before(newFaultContext())
 	if err != nil || shortCircuit != nil {
 		t.Fatalf("Before() = (%#v, %v), want no short circuit", shortCircuit, err)
-	}
-}
-
-func TestStatusConfigurationErrors(t *testing.T) {
-	tests := []config.StatusConfig{
-		{Code: 99, Probability: 1},
-		{Code: 600, Probability: 1},
-		{Code: 503, Probability: -0.1},
-		{Code: 503, Probability: math.NaN()},
-		{Code: 503, Probability: 1, RetryAfter: -1},
-	}
-	for _, configured := range tests {
-		if _, err := newStatusFault(configured); err == nil {
-			t.Errorf("newStatusFault(%+v) error = nil", configured)
-		}
 	}
 }

@@ -29,14 +29,8 @@ type truncatedBody struct {
 	remaining int64
 }
 
-func newTruncateFault(configured config.TruncateConfig) (*truncateFault, error) {
-	if err := validateProbability(configured.Probability); err != nil {
-		return nil, err
-	}
-	if math.IsNaN(configured.At) || configured.At < 0 || configured.At > 1 {
-		return nil, errors.New("at must be between 0 and 1")
-	}
-	return &truncateFault{probability: configured.Probability, at: configured.At}, nil
+func newTruncateFault(configured config.TruncateConfig) *truncateFault {
+	return &truncateFault{probability: configured.Probability, at: configured.At}
 }
 
 func (*truncateFault) Name() string {

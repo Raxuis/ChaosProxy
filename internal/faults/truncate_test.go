@@ -3,7 +3,6 @@ package faults
 import (
 	"errors"
 	"io"
-	"math"
 	"net/http"
 	"strings"
 	"testing"
@@ -32,7 +31,7 @@ func (body *trackingReadCloser) Close() error {
 }
 
 func TestTruncateKeepsDeclaredLengthAndFailsAfterCut(t *testing.T) {
-	fault := newTestTruncateFault(t, 0.5)
+	fault := newTestTruncateFault(0.5)
 	body := newTrackingReadCloser("0123456789")
 	response := &http.Response{
 		Body:          body,
@@ -65,7 +64,7 @@ func TestTruncateKeepsDeclaredLengthAndFailsAfterCut(t *testing.T) {
 }
 
 func TestTruncateBuffersUnknownLength(t *testing.T) {
-	fault := newTestTruncateFault(t, 0.5)
+	fault := newTestTruncateFault(0.5)
 	response := &http.Response{Body: newTrackingReadCloser("0123456789"), ContentLength: -1, Header: make(http.Header)}
 
 	if err := fault.After(newFaultContext(), response); err != nil {
@@ -81,7 +80,7 @@ func TestTruncateBuffersUnknownLength(t *testing.T) {
 }
 
 func TestTruncateCapsBufferingOfUnknownLength(t *testing.T) {
-	fault := newTestTruncateFault(t, 0.25)
+	fault := newTestTruncateFault(0.25)
 	body := newTrackingReadCloser(strings.Repeat("x", 3*maxBufferedTruncation))
 	response := &http.Response{Body: body, ContentLength: -1, Header: make(http.Header)}
 
@@ -103,10 +102,7 @@ func TestTruncateLeavesResponseUntouched(t *testing.T) {
 		"at one":           {Probability: 1, At: 1},
 	}
 	for name, configured := range tests {
-		fault, err := newTruncateFault(configured)
-		if err != nil {
-			t.Fatalf("%s: newTruncateFault() unexpected error: %v", name, err)
-		}
+		fault := newTruncateFault(configured)
 		body := newTrackingReadCloser("body")
 		response := &http.Response{Body: body, ContentLength: -1, Header: make(http.Header)}
 
@@ -119,26 +115,6 @@ func TestTruncateLeavesResponseUntouched(t *testing.T) {
 	}
 }
 
-func TestTruncateConfigurationErrors(t *testing.T) {
-	tests := []config.TruncateConfig{
-		{Probability: -1, At: 0.5},
-		{Probability: 2, At: 0.5},
-		{Probability: 1, At: -0.1},
-		{Probability: 1, At: 1.1},
-		{Probability: 1, At: math.NaN()},
-	}
-	for _, configured := range tests {
-		if _, err := newTruncateFault(configured); err == nil {
-			t.Errorf("newTruncateFault(%+v) error = nil", configured)
-		}
-	}
-}
-
-func newTestTruncateFault(t *testing.T, at float64) *truncateFault {
-	t.Helper()
-	fault, err := newTruncateFault(config.TruncateConfig{Probability: 1, At: at})
-	if err != nil {
-		t.Fatalf("newTruncateFault() unexpected error: %v", err)
-	}
-	return fault
+func newTestTruncateFault(at float64) *truncateFault {
+	return newTruncateFault(config.TruncateConfig{Probability: 1, At: at})
 }

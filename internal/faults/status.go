@@ -2,7 +2,6 @@ package faults
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -17,22 +16,12 @@ type statusFault struct {
 	retryAfter  int
 }
 
-func newStatusFault(configured config.StatusConfig) (*statusFault, error) {
-	if configured.Code < 100 || configured.Code > 599 {
-		return nil, errors.New("status code must be between 100 and 599")
-	}
-	if err := validateProbability(configured.Probability); err != nil {
-		return nil, err
-	}
-	if configured.RetryAfter < 0 {
-		return nil, errors.New("retry_after must not be negative")
-	}
-
+func newStatusFault(configured config.StatusConfig) *statusFault {
 	return &statusFault{
 		code:        configured.Code,
 		probability: configured.Probability,
 		retryAfter:  configured.RetryAfter,
-	}, nil
+	}
 }
 
 func (*statusFault) Name() string {

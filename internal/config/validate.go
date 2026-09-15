@@ -47,7 +47,7 @@ func validateCORSOrigins(configured *Config, addIssue func(int, string, string))
 
 func validateCORS(configured *Config, addIssue func(int, string, string)) {
 	switch configured.CORS {
-	case "", CORSReflect, CORSPassthrough, CORSOff:
+	case CORSReflect, CORSPassthrough, CORSOff:
 		return
 	default:
 		addIssue(configured.source.lineFor("cors"), "cors", "must be reflect, passthrough, or off")

@@ -21,36 +21,18 @@ type latencyFault struct {
 	sigma        float64
 }
 
-func newLatencyFault(configured config.LatencyConfig) (*latencyFault, error) {
+func newLatencyFault(configured config.LatencyConfig) *latencyFault {
 	fault := &latencyFault{
 		distribution: configured.Dist,
 		value:        configured.Value,
 		jitter:       configured.Jitter,
 	}
-
-	switch configured.Dist {
-	case "fixed":
-		if configured.Value < 0 {
-			return nil, errors.New("value must not be negative")
-		}
-		if configured.Jitter < 0 {
-			return nil, errors.New("jitter must not be negative")
-		}
-	case "lognormal":
-		if configured.P50 <= 0 || configured.P99 <= 0 {
-			return nil, errors.New("p50 and p99 must be greater than zero")
-		}
-		if configured.P50 > configured.P99 {
-			return nil, errors.New("p50 must not exceed p99")
-		}
+	if configured.Dist == "lognormal" {
 		fault.mu = math.Log(float64(configured.P50))
 		fault.sigma = math.Log(float64(configured.P99)/float64(configured.P50)) / standardNormalP99
 		fault.value = configured.P50
-	default:
-		return nil, errors.New("distribution must be either fixed or lognormal")
 	}
-
-	return fault, nil
+	return fault
 }
 
 func (*latencyFault) Name() string {

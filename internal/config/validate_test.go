@@ -135,6 +135,14 @@ func TestValidateRequiredFieldsAndLatencyModes(t *testing.T) {
 			wantError: "latency.value must not be negative",
 		},
 		{
+			name: "negative jitter",
+			configured: &config.Config{
+				Target: "http://localhost",
+				Rules:  []config.Rule{{Name: "slow", Match: "/api", Enabled: true, Latency: &config.LatencyConfig{Dist: "fixed", Jitter: -1}}},
+			},
+			wantError: "latency.jitter must not be negative",
+		},
+		{
 			name: "missing lognormal percentiles",
 			configured: &config.Config{
 				Target: "http://localhost",
@@ -161,6 +169,7 @@ func TestValidateAllowsProbabilityBoundaries(t *testing.T) {
 
 	configured := &config.Config{
 		Target: "https://api.example.com",
+		CORS:   config.CORSPassthrough,
 		Rules: []config.Rule{
 			{
 				Name:    "never",
@@ -186,9 +195,11 @@ func TestValidateAllowsProbabilityBoundaries(t *testing.T) {
 func TestValidateRejectsUnknownCORSMode(t *testing.T) {
 	t.Parallel()
 
-	configured := &config.Config{Target: "http://localhost", CORS: "mirror"}
-	if err := configured.Validate(); err == nil || !strings.Contains(err.Error(), "cors must be") {
-		t.Fatalf("Validate() error = %v, want CORS mode error", err)
+	for _, mode := range []config.CORSMode{"mirror", ""} {
+		configured := &config.Config{Target: "http://localhost", CORS: mode}
+		if err := configured.Validate(); err == nil || !strings.Contains(err.Error(), "cors must be") {
+			t.Errorf("Validate() with cors %q error = %v, want CORS mode error", mode, err)
+		}
 	}
 }
 

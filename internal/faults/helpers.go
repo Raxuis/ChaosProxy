@@ -2,7 +2,6 @@ package faults
 
 import (
 	"errors"
-	"math"
 	"math/rand"
 )
 
@@ -15,13 +14,6 @@ func validateContext(ctx *Context) error {
 	}
 	if ctx.Rng == nil {
 		return errors.New("request random generator must not be nil")
-	}
-	return nil
-}
-
-func validateProbability(probability float64) error {
-	if math.IsNaN(probability) || probability < 0 || probability > 1 {
-		return errors.New("probability must be between 0 and 1")
 	}
 	return nil
 }

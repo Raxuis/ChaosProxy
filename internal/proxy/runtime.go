@@ -47,16 +47,7 @@ func compileRuntime(base *config.Config, overrides map[string]bool) (*runtimeCon
 
 	chains := make(map[string][]faults.Fault, len(configured.Rules))
 	for _, rule := range configured.Rules {
-		chain, err := faults.Build(rule)
-		if err != nil {
-			return nil, err
-		}
-		chains[rule.Name] = chain
-	}
-
-	corsMode := configured.CORS
-	if corsMode == "" {
-		corsMode = config.CORSReflect
+		chains[rule.Name] = faults.Build(rule)
 	}
 	return &runtimeConfig{
 		base:       base,
@@ -64,7 +55,7 @@ func compileRuntime(base *config.Config, overrides map[string]bool) (*runtimeCon
 		configured: configured,
 		target:     target,
 		seed:       configured.Seed,
-		cors:       newCORSPolicy(corsMode, configured.CORSOrigins),
+		cors:       newCORSPolicy(configured.CORS, configured.CORSOrigins),
 		match:      matcher,
 		chains:     chains,
 	}, nil

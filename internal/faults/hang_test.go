@@ -8,10 +8,7 @@ import (
 )
 
 func TestHangBeforeReturnsImmediatelyWithoutGoroutine(t *testing.T) {
-	fault, err := newHangFault(config.HangConfig{Probability: 1})
-	if err != nil {
-		t.Fatalf("newHangFault() unexpected error: %v", err)
-	}
+	fault := newHangFault(config.HangConfig{Probability: 1})
 
 	runtime.GC()
 	before := runtime.NumGoroutine()
@@ -32,18 +29,9 @@ func TestHangBeforeReturnsImmediatelyWithoutGoroutine(t *testing.T) {
 }
 
 func TestHangProbabilityZeroDoesNotTrigger(t *testing.T) {
-	fault, err := newHangFault(config.HangConfig{Probability: 0})
-	if err != nil {
-		t.Fatalf("newHangFault() unexpected error: %v", err)
-	}
+	fault := newHangFault(config.HangConfig{Probability: 0})
 	shortCircuit, err := fault.Before(newFaultContext())
 	if err != nil || shortCircuit != nil {
 		t.Fatalf("Before() = (%#v, %v), want no short circuit", shortCircuit, err)
-	}
-}
-
-func TestHangRejectsInvalidProbability(t *testing.T) {
-	if _, err := newHangFault(config.HangConfig{Probability: 2}); err == nil {
-		t.Fatal("newHangFault() error = nil")
 	}
 }

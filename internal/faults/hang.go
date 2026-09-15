@@ -7,11 +7,8 @@ type hangFault struct {
 	probability float64
 }
 
-func newHangFault(configured config.HangConfig) (*hangFault, error) {
-	if err := validateProbability(configured.Probability); err != nil {
-		return nil, err
-	}
-	return &hangFault{probability: configured.Probability}, nil
+func newHangFault(configured config.HangConfig) *hangFault {
+	return &hangFault{probability: configured.Probability}
 }
 
 func (*hangFault) Name() string {
