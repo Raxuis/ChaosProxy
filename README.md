@@ -6,10 +6,11 @@ Chaos Proxy will sit between a frontend application and its real HTTP API, injec
 
 ## Project status
 
-Phase 1 is in progress. The proxy already supports route matching, seeded fault
-injection, browser-safe CORS handling, and streaming responses.
-
-See [PROGRESS.md](PROGRESS.md) for the roadmap, current task, and validation gates.
+Chaos Proxy is under active development and not released yet. It already
+supports route matching, latency, status, hang and truncation faults, hot
+reload, reproducible seeded decisions, browser-safe CORS handling, and a control
+plane with a live event stream. An embedded web UI, scenario mode and CI
+integrations are planned.
 
 ## Local development
 
@@ -111,6 +112,10 @@ cors_origins:
 
 `"*"` reflects every origin with credentials; keep it out of shared configurations.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
-MIT (license file will be finalized during the packaging task).
+MIT. See [LICENSE](LICENSE).
