@@ -67,6 +67,13 @@ POST /api/reset
 
 Press Ctrl+C to stop the server gracefully.
 
+## Reproducibility
+
+Each rule draws its decisions from the seed, the rule name, and the number of
+requests that rule has matched. Unmatched requests and other rules never shift
+a rule's sequence, and `POST /api/reset` restarts every sequence. Concurrent
+requests to the same rule can still arrive in a different order between runs.
+
 ## Security defaults
 
 Chaos Proxy is a local development tool and its control plane has no

@@ -49,7 +49,7 @@ func (handler *Handler) SetRuleEnabled(name string, enabled bool) error {
 	}
 }
 
-// Reset clears request-scoped deterministic runtime counters.
+// Reset restarts every rule's deterministic decision sequence.
 func (handler *Handler) Reset() {
-	handler.requestIndex.Store(0)
+	handler.ruleCounters.Clear()
 }

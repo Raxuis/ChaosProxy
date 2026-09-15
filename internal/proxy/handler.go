@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"log"
 	"math/rand"
 	"net/http"
 	"net/http/httputil"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -22,7 +24,7 @@ import (
 // data-plane path.
 type Handler struct {
 	current      atomic.Pointer[runtimeConfig]
-	requestIndex atomic.Uint64
+	ruleCounters sync.Map
 	proxy        *httputil.ReverseProxy
 	logger       *log.Logger
 	publisher    EventPublisher
@@ -86,7 +88,6 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	index := handler.requestIndex.Add(1) - 1
 	matched := runtime.match.Match(request.Method, request.URL.Path)
 	if matched != nil {
 		faultRequest, releaseFaultRequest := handler.withShutdownCancel(request)
@@ -96,7 +97,7 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 		state.chain = runtime.chains[matched.Name]
 		state.faultContext = &faults.Context{
 			Req:  faultRequest,
-			Rng:  rand.New(rand.NewSource(deriveSeed(runtime.seed, index))),
+			Rng:  rand.New(rand.NewSource(deriveSeed(runtime.seed, matched.Name, handler.nextRuleIndex(matched.Name)))),
 			Rule: matched.Name,
 			Emit: state.metrics.record,
 		}
@@ -242,9 +243,23 @@ func (metrics *requestMetrics) record(event events.Event) {
 	metrics.injectedLatencyMs += event.InjectedLatencyMs
 }
 
-func deriveSeed(seed int64, index uint64) int64 {
-	value := uint64(seed) + index + 0x9e3779b97f4a7c15
+func (handler *Handler) nextRuleIndex(rule string) uint64 {
+	counter, found := handler.ruleCounters.Load(rule)
+	if !found {
+		counter, _ = handler.ruleCounters.LoadOrStore(rule, new(atomic.Uint64))
+	}
+	return counter.(*atomic.Uint64).Add(1) - 1
+}
+
+func deriveSeed(seed int64, rule string, index uint64) int64 {
+	ruleHash := fnv.New64a()
+	_, _ = ruleHash.Write([]byte(rule))
+	return int64(splitMix64(splitMix64(uint64(seed)^ruleHash.Sum64()) + index))
+}
+
+func splitMix64(value uint64) uint64 {
+	value += 0x9e3779b97f4a7c15
 	value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9
 	value = (value ^ (value >> 27)) * 0x94d049bb133111eb
-	return int64(value ^ (value >> 31))
+	return value ^ (value >> 31)
 }
