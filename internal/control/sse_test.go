@@ -43,7 +43,7 @@ func TestEventStreamSendsHistoryLiveEventsAndHeartbeats(t *testing.T) {
 	handler.heartbeat = 10 * time.Millisecond
 
 	ctx, cancel := context.WithCancel(context.Background())
-	request := httptest.NewRequest(http.MethodGet, "http://control.test/api/events", nil).WithContext(ctx)
+	request := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:7071/api/events", nil).WithContext(ctx)
 	response := httptest.NewRecorder()
 	done := make(chan struct{})
 	go func() {
@@ -107,7 +107,7 @@ func TestEventStreamStopsOnShutdown(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "http://control.test/api/events", nil))
+		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "http://127.0.0.1:7071/api/events", nil))
 		close(done)
 	}()
 	waitForSubscribers(t, bus, 1)

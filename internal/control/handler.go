@@ -4,11 +4,13 @@ package control
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"time"
 
 	"github.com/Raxuis/chaosproxy/internal/config"
 	"github.com/Raxuis/chaosproxy/internal/events"
+	"github.com/Raxuis/chaosproxy/internal/loopback"
 )
 
 const heartbeatInterval = 15 * time.Second
@@ -22,12 +24,13 @@ type Runtime interface {
 
 // Handler exposes runtime control and observability over HTTP.
 type Handler struct {
-	bus       *events.Bus
-	runtime   Runtime
-	heartbeat time.Duration
-	mux       *http.ServeMux
-	stopping  context.Context
-	stop      context.CancelFunc
+	bus         *events.Bus
+	runtime     Runtime
+	heartbeat   time.Duration
+	mux         *http.ServeMux
+	crossOrigin *http.CrossOriginProtection
+	stopping    context.Context
+	stop        context.CancelFunc
 }
 
 // NewHandler creates a control-plane HTTP handler.
@@ -40,10 +43,11 @@ func NewHandler(bus *events.Bus, runtime Runtime) (*Handler, error) {
 	}
 
 	handler := &Handler{
-		bus:       bus,
-		runtime:   runtime,
-		heartbeat: heartbeatInterval,
-		mux:       http.NewServeMux(),
+		bus:         bus,
+		runtime:     runtime,
+		heartbeat:   heartbeatInterval,
+		mux:         http.NewServeMux(),
+		crossOrigin: http.NewCrossOriginProtection(),
 	}
 	handler.stopping, handler.stop = context.WithCancel(context.Background())
 	handler.routes()
@@ -57,7 +61,24 @@ func (handler *Handler) BeginShutdown() {
 
 // ServeHTTP dispatches control-plane requests.
 func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	if !allowedHost(request.Host) {
+		writeJSONError(writer, http.StatusForbidden, "host not allowed")
+		return
+	}
+	if err := handler.crossOrigin.Check(request); err != nil {
+		writeJSONError(writer, http.StatusForbidden, err.Error())
+		return
+	}
 	handler.mux.ServeHTTP(writer, request)
+}
+
+// DNS rebinding attacks need a hostname, so IP literals stay usable from containers.
+func allowedHost(hostport string) bool {
+	host := hostport
+	if split, _, err := net.SplitHostPort(hostport); err == nil {
+		host = split
+	}
+	return loopback.IsHost(host) || net.ParseIP(host) != nil
 }
 
 func (handler *Handler) routes() {

@@ -1,6 +1,9 @@
 package config
 
-import "reflect"
+import (
+	"reflect"
+	"slices"
+)
 
 type changeSummary struct {
 	added         []string
@@ -15,7 +18,7 @@ func summarizeChanges(previous, next *Config) changeSummary {
 	summary := changeSummary{
 		targetChanged: previous.Target != next.Target,
 		seedChanged:   previous.Seed != next.Seed,
-		corsChanged:   previous.CORS != next.CORS,
+		corsChanged:   previous.CORS != next.CORS || !slices.Equal(previous.CORSOrigins, next.CORSOrigins),
 	}
 
 	previousRules := make(map[string]Rule, len(previous.Rules))

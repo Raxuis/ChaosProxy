@@ -20,6 +20,7 @@ func TestParseOptions(t *testing.T) {
 		args            []string
 		wantTarget      string
 		wantConfig      string
+		wantHost        string
 		wantPort        int
 		wantControlPort int
 		wantSeed        int64
@@ -29,6 +30,8 @@ func TestParseOptions(t *testing.T) {
 		{name: "target only", args: []string{"--target", "http://localhost:9000"}, wantTarget: "http://localhost:9000", wantPort: 7070, wantControlPort: 7071},
 		{name: "config only", args: []string{"--config", "chaos.yaml"}, wantConfig: "chaos.yaml", wantPort: 7070, wantControlPort: 7071},
 		{name: "all overrides", args: []string{"--config", "chaos.yaml", "--target", "https://api.example.com", "--port", "9090", "--control-port", "9091", "--seed", "0"}, wantConfig: "chaos.yaml", wantTarget: "https://api.example.com", wantPort: 9090, wantControlPort: 9091, wantSeed: 0, seedSet: true},
+		{name: "exposed host", args: []string{"--target", "http://localhost:9000", "--host", "0.0.0.0"}, wantTarget: "http://localhost:9000", wantHost: "0.0.0.0", wantPort: 7070, wantControlPort: 7071},
+		{name: "empty host", args: []string{"--target", "http://localhost", "--host", ""}, wantError: "--host must not be empty"},
 		{name: "missing source", wantError: "either --config or --target is required"},
 		{name: "positional argument", args: []string{"--target", "http://localhost", "extra"}, wantError: "unexpected positional arguments"},
 		{name: "zero port", args: []string{"--target", "http://localhost", "--port", "0"}, wantError: "--port must be between"},
@@ -54,6 +57,13 @@ func TestParseOptions(t *testing.T) {
 			}
 			if got.target != test.wantTarget || got.configPath != test.wantConfig || got.port != test.wantPort || got.controlPort != test.wantControlPort {
 				t.Errorf("options = %+v, want target=%q config=%q ports=%d/%d", got, test.wantTarget, test.wantConfig, test.wantPort, test.wantControlPort)
+			}
+			wantHost := test.wantHost
+			if wantHost == "" {
+				wantHost = "127.0.0.1"
+			}
+			if got.host != wantHost {
+				t.Errorf("host = %q, want %q", got.host, wantHost)
 			}
 			if got.seed.value != test.wantSeed || got.seed.set != test.seedSet {
 				t.Errorf("seed = %+v, want value=%d set=%t", got.seed, test.wantSeed, test.seedSet)

@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	defaultHost        = "127.0.0.1"
 	defaultPort        = 7070
 	defaultControlPort = 7071
 )
@@ -18,6 +19,7 @@ const (
 type options struct {
 	configPath  string
 	target      string
+	host        string
 	port        int
 	controlPort int
 	seed        optionalInt64
@@ -52,6 +54,7 @@ func parseOptions(args []string, output io.Writer) (options, error) {
 	var opts options
 	flags.StringVar(&opts.configPath, "config", "", "path to a chaos YAML configuration")
 	flags.StringVar(&opts.target, "target", "", "upstream base URL (overrides config)")
+	flags.StringVar(&opts.host, "host", defaultHost, "listen address for both planes")
 	flags.IntVar(&opts.port, "port", defaultPort, "data-plane listen port")
 	flags.IntVar(&opts.controlPort, "control-port", defaultControlPort, "control-plane listen port")
 	flags.Var(&opts.seed, "seed", "random seed (overrides config)")
@@ -64,6 +67,9 @@ func parseOptions(args []string, output io.Writer) (options, error) {
 	}
 	if opts.configPath == "" && opts.target == "" {
 		return options{}, errors.New("either --config or --target is required")
+	}
+	if opts.host == "" {
+		return options{}, errors.New("--host must not be empty")
 	}
 	if opts.port < 1 || opts.port > 65535 {
 		return options{}, errors.New("--port must be between 1 and 65535")

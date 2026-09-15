@@ -86,6 +86,66 @@ func TestControlPlaneHealthAndReset(t *testing.T) {
 	}
 }
 
+func TestControlPlaneRejectsForeignHostsAndCrossSiteWrites(t *testing.T) {
+	t.Parallel()
+
+	bus := events.NewBus()
+	handler, err := control.NewHandler(bus, newRuntime(t, "http://localhost:9000", bus))
+	if err != nil {
+		t.Fatalf("NewHandler() unexpected error: %v", err)
+	}
+
+	const reset = "http://127.0.0.1:7071/api/reset"
+	tests := []struct {
+		name    string
+		method  string
+		url     string
+		headers map[string]string
+		want    int
+	}{
+		{name: "IPv4 loopback", method: http.MethodGet, url: "http://127.0.0.1:7071/healthz", want: http.StatusOK},
+		{name: "localhost", method: http.MethodGet, url: "http://localhost:7071/healthz", want: http.StatusOK},
+		{name: "IPv6 loopback", method: http.MethodGet, url: "http://[::1]:7071/healthz", want: http.StatusOK},
+		{name: "container IP", method: http.MethodGet, url: "http://172.17.0.2:7071/healthz", want: http.StatusOK},
+		{name: "DNS rebinding hostname", method: http.MethodGet, url: "http://evil.example:7071/api/config", want: http.StatusForbidden},
+		{name: "CLI write", method: http.MethodPost, url: reset, want: http.StatusNoContent},
+		{
+			name:    "same-origin browser write",
+			method:  http.MethodPost,
+			url:     reset,
+			headers: map[string]string{"Origin": "http://127.0.0.1:7071", "Sec-Fetch-Site": "same-origin"},
+			want:    http.StatusNoContent,
+		},
+		{
+			name:    "cross-site browser write",
+			method:  http.MethodPost,
+			url:     reset,
+			headers: map[string]string{"Origin": "https://evil.example", "Sec-Fetch-Site": "cross-site"},
+			want:    http.StatusForbidden,
+		},
+		{
+			name:    "cross-origin write without fetch metadata",
+			method:  http.MethodPost,
+			url:     reset,
+			headers: map[string]string{"Origin": "https://evil.example"},
+			want:    http.StatusForbidden,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(test.method, test.url, nil)
+			for name, value := range test.headers {
+				request.Header.Set(name, value)
+			}
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != test.want {
+				t.Fatalf("status = %d body=%s, want %d", response.Code, response.Body.String(), test.want)
+			}
+		})
+	}
+}
+
 func TestControlPlaneRejectsInvalidDependencies(t *testing.T) {
 	t.Parallel()
 
@@ -119,7 +179,7 @@ func newRuntime(t *testing.T, target string, bus *events.Bus) *proxy.Handler {
 
 func serveControl(handler http.Handler, method, path, body string) *httptest.ResponseRecorder {
 	response := httptest.NewRecorder()
-	handler.ServeHTTP(response, httptest.NewRequest(method, "http://control.test"+path, strings.NewReader(body)))
+	handler.ServeHTTP(response, httptest.NewRequest(method, "http://127.0.0.1:7071"+path, strings.NewReader(body)))
 	return response
 }
 

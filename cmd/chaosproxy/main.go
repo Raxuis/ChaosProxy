@@ -10,6 +10,7 @@ import (
 	"github.com/Raxuis/chaosproxy/internal/config"
 	"github.com/Raxuis/chaosproxy/internal/control"
 	"github.com/Raxuis/chaosproxy/internal/events"
+	"github.com/Raxuis/chaosproxy/internal/loopback"
 	"github.com/Raxuis/chaosproxy/internal/proxy"
 )
 
@@ -53,7 +54,11 @@ func main() {
 		watchConfig = watcher.Run
 	}
 
+	if !loopback.IsHost(opts.host) {
+		log.Printf("warning: --host %s exposes the proxy and its unauthenticated control plane to the network", opts.host)
+	}
 	if err := run(serverOptions{
+		host:                 opts.host,
 		dataPort:             opts.port,
 		controlPort:          opts.controlPort,
 		target:               configured.Target,

@@ -198,11 +198,11 @@ func runBefore(ctx *faults.Context, chain []faults.Fault) (*faults.ShortCircuit,
 func writeShortCircuit(
 	writer http.ResponseWriter,
 	request *http.Request,
-	mode config.CORSMode,
+	cors corsPolicy,
 	shortCircuit *faults.ShortCircuit,
 ) {
 	copyHeaders(writer.Header(), shortCircuit.Headers)
-	applyResponseCORS(writer.Header(), request, mode)
+	applyResponseCORS(writer.Header(), request, cors)
 	status := shortCircuit.Status
 	if status == 0 {
 		status = http.StatusInternalServerError
@@ -213,7 +213,7 @@ func writeShortCircuit(
 	}
 }
 
-func writeJSONError(writer http.ResponseWriter, request *http.Request, mode config.CORSMode, status int, message string) {
+func writeJSONError(writer http.ResponseWriter, request *http.Request, cors corsPolicy, status int, message string) {
 	body, err := json.Marshal(struct {
 		Error string `json:"error"`
 	}{Error: message})
@@ -222,7 +222,7 @@ func writeJSONError(writer http.ResponseWriter, request *http.Request, mode conf
 	}
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	writer.Header().Set("Cache-Control", "no-store")
-	applyResponseCORS(writer.Header(), request, mode)
+	applyResponseCORS(writer.Header(), request, cors)
 	writer.WriteHeader(status)
 	_, _ = writer.Write(body)
 }

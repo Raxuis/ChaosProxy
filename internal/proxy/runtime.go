@@ -14,7 +14,7 @@ type runtimeConfig struct {
 	configured *config.Config
 	target     *url.URL
 	seed       int64
-	cors       config.CORSMode
+	cors       corsPolicy
 	match      *rules.Matcher
 	chains     map[string][]faults.Fault
 }
@@ -54,7 +54,7 @@ func compileRuntime(configured *config.Config) (*runtimeConfig, error) {
 		configured: configured,
 		target:     target,
 		seed:       configured.Seed,
-		cors:       corsMode,
+		cors:       newCORSPolicy(corsMode, configured.CORSOrigins),
 		match:      matcher,
 		chains:     chains,
 	}, nil

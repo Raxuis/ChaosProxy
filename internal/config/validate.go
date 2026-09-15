@@ -26,8 +26,23 @@ func (configured *Config) Validate() error {
 
 	validateTarget(configured, addIssue)
 	validateCORS(configured, addIssue)
+	validateCORSOrigins(configured, addIssue)
 	validateRules(configured, addIssue)
 	return errors.Join(issues...)
+}
+
+func validateCORSOrigins(configured *Config, addIssue func(int, string, string)) {
+	line := configured.source.lineFor("cors_origins")
+	for index, origin := range configured.CORSOrigins {
+		if origin == "*" {
+			continue
+		}
+		parsed, err := url.Parse(origin)
+		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" ||
+			parsed.User != nil || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+			addIssue(line, fmt.Sprintf("cors_origins[%d]", index), `must be "*" or an origin such as http://localhost:3000`)
+		}
+	}
 }
 
 func validateCORS(configured *Config, addIssue func(int, string, string)) {

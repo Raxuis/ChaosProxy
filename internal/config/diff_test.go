@@ -45,6 +45,16 @@ func TestSummarizeChanges(t *testing.T) {
 	}
 }
 
+func TestSummarizeChangesDetectsCORSOrigins(t *testing.T) {
+	t.Parallel()
+
+	previous := &Config{CORS: CORSReflect, CORSOrigins: []string{"http://localhost:3001"}}
+	next := &Config{CORS: CORSReflect, CORSOrigins: []string{"https://app.test"}}
+	if !summarizeChanges(previous, next).corsChanged {
+		t.Fatal("corsChanged = false, want true when cors_origins changes")
+	}
+}
+
 func TestSameRuleIgnoresYAMLSourceLocations(t *testing.T) {
 	t.Parallel()
 

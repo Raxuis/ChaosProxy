@@ -7,6 +7,47 @@ import (
 	"github.com/Raxuis/chaosproxy/internal/config"
 )
 
+func TestValidateCORSOrigins(t *testing.T) {
+	t.Parallel()
+
+	valid, err := config.Load(writeConfig(t, `
+target: http://localhost:9000
+cors_origins:
+  - "*"
+  - http://localhost:3001
+  - https://app.test
+`))
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	if len(valid.CORSOrigins) != 3 {
+		t.Fatalf("CORSOrigins = %v, want 3 entries", valid.CORSOrigins)
+	}
+	if err := valid.Validate(); err != nil {
+		t.Fatalf("Validate() unexpected error: %v", err)
+	}
+
+	invalid, err := config.Load(writeConfig(t, `
+target: http://localhost:9000
+cors_origins:
+  - localhost:3001
+  - http://localhost:3001/
+  - ftp://files.test
+`))
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	err = invalid.Validate()
+	if err == nil {
+		t.Fatal("Validate() error = nil, want invalid origins")
+	}
+	for _, expected := range []string{"cors_origins[0] must be", "cors_origins[1] must be", "cors_origins[2] must be"} {
+		if !strings.Contains(err.Error(), expected) {
+			t.Errorf("Validate() error does not contain %q:\n%s", expected, err)
+		}
+	}
+}
+
 func TestValidateReturnsAllErrorsWithSourceLines(t *testing.T) {
 	t.Parallel()
 

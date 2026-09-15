@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,6 +17,7 @@ import (
 const shutdownTimeout = 10 * time.Second
 
 type serverOptions struct {
+	host                 string
 	dataPort             int
 	controlPort          int
 	target               string
@@ -43,7 +45,7 @@ func run(options serverOptions) error {
 		{
 			name: "data plane",
 			server: &http.Server{
-				Addr:              ":" + strconv.Itoa(options.dataPort),
+				Addr:              net.JoinHostPort(options.host, strconv.Itoa(options.dataPort)),
 				Handler:           options.dataHandler,
 				ReadHeaderTimeout: 10 * time.Second,
 			},
@@ -51,7 +53,7 @@ func run(options serverOptions) error {
 		{
 			name: "control plane",
 			server: &http.Server{
-				Addr:              ":" + strconv.Itoa(options.controlPort),
+				Addr:              net.JoinHostPort(options.host, strconv.Itoa(options.controlPort)),
 				Handler:           options.controlHandler,
 				ReadHeaderTimeout: 10 * time.Second,
 			},

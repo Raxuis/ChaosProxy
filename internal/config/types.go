@@ -14,10 +14,11 @@ const (
 
 // Config is the complete file-backed configuration.
 type Config struct {
-	Target string   `json:"target" yaml:"target"`
-	Seed   int64    `json:"seed" yaml:"seed"`
-	CORS   CORSMode `json:"cors" yaml:"cors"`
-	Rules  []Rule   `json:"rules" yaml:"rules"`
+	Target      string   `json:"target" yaml:"target"`
+	Seed        int64    `json:"seed" yaml:"seed"`
+	CORS        CORSMode `json:"cors" yaml:"cors"`
+	CORSOrigins []string `json:"cors_origins,omitempty" yaml:"cors_origins,omitempty"`
+	Rules       []Rule   `json:"rules" yaml:"rules"`
 
 	source sourceLocation
 }
@@ -63,10 +64,11 @@ type TruncateConfig struct {
 }
 
 type rawConfig struct {
-	Target string    `yaml:"target"`
-	Seed   int64     `yaml:"seed"`
-	CORS   CORSMode  `yaml:"cors"`
-	Rules  []rawRule `yaml:"rules"`
+	Target      string    `yaml:"target"`
+	Seed        int64     `yaml:"seed"`
+	CORS        CORSMode  `yaml:"cors"`
+	CORSOrigins []string  `yaml:"cors_origins"`
+	Rules       []rawRule `yaml:"rules"`
 }
 
 type rawRule struct {

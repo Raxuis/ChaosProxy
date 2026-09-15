@@ -52,10 +52,11 @@ func decode(contents []byte) (*Config, error) {
 	}
 
 	configured := &Config{
-		Target: raw.Target,
-		Seed:   raw.Seed,
-		CORS:   raw.CORS,
-		Rules:  make([]Rule, len(raw.Rules)),
+		Target:      raw.Target,
+		Seed:        raw.Seed,
+		CORS:        raw.CORS,
+		CORSOrigins: raw.CORSOrigins,
+		Rules:       make([]Rule, len(raw.Rules)),
 	}
 	if configured.CORS == "" {
 		configured.CORS = CORSReflect

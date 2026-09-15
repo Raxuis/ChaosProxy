@@ -15,7 +15,7 @@ See [PROGRESS.md](PROGRESS.md) for the roadmap, current task, and validation gat
 
 Requirements:
 
-- Go 1.22 or newer
+- Go 1.25 or newer
 - Git
 
 The `--target` is the real API, not the frontend. For example, if the frontend
@@ -47,6 +47,7 @@ Available flags:
 ```text
 --config PATH  YAML configuration file
 --target URL   upstream base URL; overrides the YAML value
+--host HOST    listen address for both planes (default 127.0.0.1)
 --port PORT    data-plane listen port (default 7070)
 --control-port PORT  control-plane listen port (default 7071)
 --seed N       random seed; overrides the YAML value
@@ -65,6 +66,29 @@ POST /api/reset
 ```
 
 Press Ctrl+C to stop the server gracefully.
+
+## Security defaults
+
+Chaos Proxy is a local development tool and its control plane has no
+authentication.
+
+- Both planes listen on `127.0.0.1`. Use `--host 0.0.0.0` only on an isolated
+  network, such as inside a container.
+- The control plane only answers requests whose `Host` is `localhost` or an IP
+  address, and rejects cross-origin browser writes.
+- With `cors: reflect`, only loopback origins (`localhost`, `*.localhost`,
+  `127.0.0.1`, `[::1]`) receive reflected CORS headers. Other origins get the
+  upstream CORS headers unchanged. A non-empty `cors_origins` list replaces the
+  loopback default:
+
+```yaml
+cors: reflect
+cors_origins:
+  - http://localhost:3001
+  - https://app.test
+```
+
+`"*"` reflects every origin with credentials; keep it out of shared configurations.
 
 ## License
 

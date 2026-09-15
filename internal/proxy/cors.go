@@ -2,18 +2,54 @@ package proxy
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/Raxuis/chaosproxy/internal/config"
+	"github.com/Raxuis/chaosproxy/internal/loopback"
 )
 
-func handlePreflight(writer http.ResponseWriter, request *http.Request, mode config.CORSMode) bool {
+type corsPolicy struct {
+	mode      config.CORSMode
+	anyOrigin bool
+	origins   map[string]struct{}
+}
+
+func newCORSPolicy(mode config.CORSMode, origins []string) corsPolicy {
+	policy := corsPolicy{mode: mode, origins: make(map[string]struct{}, len(origins))}
+	for _, origin := range origins {
+		if origin == "*" {
+			policy.anyOrigin = true
+			continue
+		}
+		policy.origins[strings.ToLower(origin)] = struct{}{}
+	}
+	return policy
+}
+
+func (policy corsPolicy) allows(origin string) bool {
+	if policy.anyOrigin {
+		return true
+	}
+	if len(policy.origins) > 0 {
+		_, listed := policy.origins[strings.ToLower(origin)]
+		return listed
+	}
+	parsed, err := url.Parse(origin)
+	return err == nil && loopback.IsHost(parsed.Hostname())
+}
+
+func handlePreflight(writer http.ResponseWriter, request *http.Request, policy corsPolicy) bool {
 	requestedMethod := request.Header.Get("Access-Control-Request-Method")
-	if mode != config.CORSReflect || request.Method != http.MethodOptions || requestedMethod == "" {
+	if policy.mode != config.CORSReflect || request.Method != http.MethodOptions || requestedMethod == "" {
+		return false
+	}
+	origin := request.Header.Get("Origin")
+	if !policy.allows(origin) {
 		return false
 	}
 
-	applyReflectCORS(writer.Header(), request)
+	applyReflectCORS(writer.Header(), origin)
 	writer.Header().Set("Access-Control-Allow-Methods", requestedMethod)
 	if requestedHeaders := request.Header.Get("Access-Control-Request-Headers"); requestedHeaders != "" {
 		writer.Header().Set("Access-Control-Allow-Headers", requestedHeaders)
@@ -24,10 +60,17 @@ func handlePreflight(writer http.ResponseWriter, request *http.Request, mode con
 	return true
 }
 
-func applyResponseCORS(headers http.Header, request *http.Request, mode config.CORSMode) {
-	switch mode {
+func applyResponseCORS(headers http.Header, request *http.Request, policy corsPolicy) {
+	switch policy.mode {
 	case config.CORSReflect:
-		applyReflectCORS(headers, request)
+		origin := request.Header.Get("Origin")
+		if origin == "" {
+			return
+		}
+		addVary(headers, "Origin")
+		if policy.allows(origin) {
+			applyReflectCORS(headers, origin)
+		}
 	case config.CORSOff:
 		for key := range headers {
 			if strings.HasPrefix(strings.ToLower(key), "access-control-") {
@@ -37,15 +80,7 @@ func applyResponseCORS(headers http.Header, request *http.Request, mode config.C
 	}
 }
 
-func applyReflectCORS(headers http.Header, request *http.Request) {
-	if request == nil {
-		return
-	}
-	origin := request.Header.Get("Origin")
-	if origin == "" {
-		return
-	}
-
+func applyReflectCORS(headers http.Header, origin string) {
 	headers.Set("Access-Control-Allow-Origin", origin)
 	headers.Set("Access-Control-Allow-Credentials", "true")
 	addVary(headers, "Origin")

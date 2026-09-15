@@ -1,5 +1,7 @@
 package config
 
+import "slices"
+
 // Clone returns a deep copy that callers may safely modify before publishing as
 // a new immutable runtime configuration.
 func (configured *Config) Clone() *Config {
@@ -9,6 +11,7 @@ func (configured *Config) Clone() *Config {
 
 	cloned := *configured
 	cloned.source = cloneSource(configured.source)
+	cloned.CORSOrigins = slices.Clone(configured.CORSOrigins)
 	cloned.Rules = make([]Rule, len(configured.Rules))
 	for index, rule := range configured.Rules {
 		cloned.Rules[index] = cloneRule(rule)
