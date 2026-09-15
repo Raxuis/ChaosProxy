@@ -2,7 +2,7 @@
 package faults
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"time"
 )

@@ -1,7 +1,7 @@
 package faults
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -72,7 +72,7 @@ func newFaultContext() *Context {
 	request := httptest.NewRequest(http.MethodGet, "http://proxy.test/api", nil)
 	return &Context{
 		Req:  request,
-		Rng:  rand.New(rand.NewSource(42)),
+		Rng:  rand.New(rand.NewPCG(42, 0)),
 		Rule: "test-rule",
 	}
 }

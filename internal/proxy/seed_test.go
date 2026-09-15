@@ -10,7 +10,7 @@ func TestDeriveSeedIsStableAndSpecific(t *testing.T) {
 	if got := deriveSeed(globalSeed, "flaky", 0); got != first {
 		t.Fatalf("deriveSeed(42, flaky, 0) = %d, want stable value %d", got, first)
 	}
-	for name, other := range map[string]int64{
+	for name, other := range map[string]uint64{
 		"next request":     deriveSeed(globalSeed, "flaky", 1),
 		"other rule":       deriveSeed(globalSeed, "twin", 0),
 		"other seed":       deriveSeed(globalSeed+1, "flaky", 0),

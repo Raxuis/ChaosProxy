@@ -7,40 +7,49 @@ import (
 	"strings"
 )
 
-type compiledPath []compiledSegment
+type compiledPath struct {
+	segments []compiledSegment
+	globstar bool
+}
 
 type compiledSegment struct {
-	globstar     bool
-	pattern      *regexp.Regexp
-	matchesEmpty bool
+	globstar   bool
+	anySegment bool
+	literal    string
+	pattern    *regexp.Regexp
 }
 
 func compilePath(pattern string) (compiledPath, error) {
 	if pattern == "" || pattern[0] != '/' {
-		return nil, errors.New("path pattern must start with /")
+		return compiledPath{}, errors.New("path pattern must start with /")
 	}
 	if strings.ContainsAny(pattern, "?#") {
-		return nil, errors.New("path pattern must not contain a query string or fragment")
+		return compiledPath{}, errors.New("path pattern must not contain a query string or fragment")
 	}
 
 	parts := splitPath(pattern)
-	compiled := make(compiledPath, len(parts))
+	compiled := compiledPath{segments: make([]compiledSegment, len(parts))}
 	for index, part := range parts {
 		segment, err := compileSegment(part)
 		if err != nil {
-			return nil, fmt.Errorf("invalid segment %q: %w", part, err)
+			return compiledPath{}, fmt.Errorf("invalid segment %q: %w", part, err)
 		}
-		compiled[index] = segment
+		compiled.segments[index] = segment
+		compiled.globstar = compiled.globstar || segment.globstar
 	}
 	return compiled, nil
 }
 
 func compileSegment(pattern string) (compiledSegment, error) {
-	if pattern == "**" {
+	switch {
+	case pattern == "**":
 		return compiledSegment{globstar: true}, nil
-	}
-	if strings.Contains(pattern, "**") {
+	case strings.Contains(pattern, "**"):
 		return compiledSegment{}, errors.New("** must occupy an entire path segment")
+	case pattern == "*":
+		return compiledSegment{anySegment: true}, nil
+	case !strings.Contains(pattern, "*"):
+		return compiledSegment{literal: pattern}, nil
 	}
 
 	var expression strings.Builder
@@ -57,50 +66,66 @@ func compileSegment(pattern string) (compiledSegment, error) {
 	if err != nil {
 		return compiledSegment{}, err
 	}
-	return compiledSegment{pattern: compiled, matchesEmpty: pattern == ""}, nil
+	return compiledSegment{pattern: compiled}, nil
+}
+
+// Only a literal empty segment matches an empty path segment, so "/users/*"
+// does not match "/users/".
+func (segment compiledSegment) matches(value string) bool {
+	switch {
+	case segment.pattern != nil:
+		return segment.pattern.MatchString(value)
+	case segment.anySegment:
+		return value != ""
+	default:
+		return value == segment.literal
+	}
 }
 
 func (pattern compiledPath) matches(path string) bool {
 	if path == "" || path[0] != '/' {
 		return false
 	}
-
-	segments := splitPath(path)
-	type position struct {
-		pattern int
-		path    int
+	if pattern.globstar {
+		return pattern.matchesSegments(splitPath(path))
 	}
-	memo := make(map[position]bool)
-	visited := make(map[position]bool)
 
-	var match func(int, int) bool
-	match = func(patternIndex, pathIndex int) bool {
-		current := position{pattern: patternIndex, path: pathIndex}
-		if visited[current] {
-			return memo[current]
-		}
-		visited[current] = true
-
-		if patternIndex == len(pattern) {
-			memo[current] = pathIndex == len(segments)
-			return memo[current]
-		}
-
-		segment := pattern[patternIndex]
-		if segment.globstar {
-			memo[current] = match(patternIndex+1, pathIndex) ||
-				pathIndex < len(segments) && match(patternIndex, pathIndex+1)
-			return memo[current]
-		}
-		if pathIndex >= len(segments) || (segments[pathIndex] == "" && !segment.matchesEmpty) {
+	rest := path[1:]
+	for index, segment := range pattern.segments {
+		value, next, more := strings.Cut(rest, "/")
+		if !segment.matches(value) {
 			return false
 		}
-
-		memo[current] = segment.pattern.MatchString(segments[pathIndex]) && match(patternIndex+1, pathIndex+1)
-		return memo[current]
+		if index == len(pattern.segments)-1 {
+			return !more
+		}
+		if !more {
+			return false
+		}
+		rest = next
 	}
+	return false
+}
 
-	return match(0, 0)
+func (pattern compiledPath) matchesSegments(segments []string) bool {
+	columns := len(segments) + 1
+	matched := make([]bool, (len(pattern.segments)+1)*columns)
+	matched[len(pattern.segments)*columns+len(segments)] = true
+
+	for patternIndex := len(pattern.segments) - 1; patternIndex >= 0; patternIndex-- {
+		segment := pattern.segments[patternIndex]
+		row := patternIndex * columns
+		next := row + columns
+		for pathIndex := len(segments); pathIndex >= 0; pathIndex-- {
+			remaining := pathIndex < len(segments)
+			if segment.globstar {
+				matched[row+pathIndex] = matched[next+pathIndex] || (remaining && matched[row+pathIndex+1])
+				continue
+			}
+			matched[row+pathIndex] = remaining && matched[next+pathIndex+1] && segment.matches(segments[pathIndex])
+		}
+	}
+	return matched[0]
 }
 
 func splitPath(path string) []string {

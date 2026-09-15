@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 	"time"
 
@@ -18,7 +18,7 @@ func TestLatencyFixedSamples(t *testing.T) {
 		Jitter: 25 * time.Millisecond,
 	})
 
-	rng := rand.New(rand.NewSource(42))
+	rng := rand.New(rand.NewPCG(42, 0))
 	for index := 0; index < 1_000; index++ {
 		sample, err := fault.sample(rng)
 		if err != nil {
@@ -46,11 +46,11 @@ func TestLatencyLognormalParametersAndSampling(t *testing.T) {
 		t.Errorf("derived p99 = %s, want %s", derivedP99, p99)
 	}
 
-	first, err := fault.sample(rand.New(rand.NewSource(7)))
+	first, err := fault.sample(rand.New(rand.NewPCG(7, 0)))
 	if err != nil {
 		t.Fatalf("sample() unexpected error: %v", err)
 	}
-	second, err := fault.sample(rand.New(rand.NewSource(7)))
+	second, err := fault.sample(rand.New(rand.NewPCG(7, 0)))
 	if err != nil {
 		t.Fatalf("sample() unexpected error: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestLatencyLognormalWithEqualPercentilesIsExact(t *testing.T) {
 	const duration = 400 * time.Millisecond
 	fault := newLatencyFault(config.LatencyConfig{Dist: "lognormal", P50: duration, P99: duration})
 
-	sample, err := fault.sample(rand.New(rand.NewSource(42)))
+	sample, err := fault.sample(rand.New(rand.NewPCG(42, 0)))
 	if err != nil {
 		t.Fatalf("sample() unexpected error: %v", err)
 	}

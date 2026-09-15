@@ -2,7 +2,7 @@ package faults
 
 import (
 	"errors"
-	"math/rand"
+	"math/rand/v2"
 )
 
 func validateContext(ctx *Context) error {

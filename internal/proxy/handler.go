@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"net/http/httputil"
 	"sync"
@@ -97,7 +97,7 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 		state.chain = runtime.chains[matched.Name]
 		state.faultContext = &faults.Context{
 			Req:  faultRequest,
-			Rng:  rand.New(rand.NewSource(deriveSeed(runtime.seed, matched.Name, handler.nextRuleIndex(matched.Name)))),
+			Rng:  rand.New(rand.NewPCG(deriveSeed(runtime.seed, matched.Name, handler.nextRuleIndex(matched.Name)), 0)),
 			Rule: matched.Name,
 			Emit: state.metrics.record,
 		}
@@ -251,10 +251,10 @@ func (handler *Handler) nextRuleIndex(rule string) uint64 {
 	return counter.(*atomic.Uint64).Add(1) - 1
 }
 
-func deriveSeed(seed int64, rule string, index uint64) int64 {
+func deriveSeed(seed int64, rule string, index uint64) uint64 {
 	ruleHash := fnv.New64a()
 	_, _ = ruleHash.Write([]byte(rule))
-	return int64(splitMix64(splitMix64(uint64(seed)^ruleHash.Sum64()) + index))
+	return splitMix64(splitMix64(uint64(seed)^ruleHash.Sum64()) + index)
 }
 
 func splitMix64(value uint64) uint64 {
