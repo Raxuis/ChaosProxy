@@ -49,7 +49,7 @@ func NewHandler(configured *config.Config, logger *log.Logger, options ...Option
 	if logger == nil {
 		return nil, errors.New("logger must not be nil")
 	}
-	runtime, err := compileRuntime(configured)
+	runtime, err := compileRuntime(configured, nil)
 	if err != nil {
 		return nil, err
 	}

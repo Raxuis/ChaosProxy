@@ -65,6 +65,10 @@ PUT  /api/rules/{name}  body: {"enabled": false}
 POST /api/reset
 ```
 
+A rule toggled through `PUT /api/rules/{name}` keeps its state across
+configuration reloads until the file changes that rule's `enabled` value or
+removes the rule.
+
 Press Ctrl+C to stop the server gracefully.
 
 ## Truncation

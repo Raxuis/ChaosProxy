@@ -11,6 +11,8 @@ import (
 )
 
 type runtimeConfig struct {
+	base       *config.Config
+	overrides  map[string]bool
 	configured *config.Config
 	target     *url.URL
 	seed       int64
@@ -19,11 +21,17 @@ type runtimeConfig struct {
 	chains     map[string][]faults.Fault
 }
 
-func compileRuntime(configured *config.Config) (*runtimeConfig, error) {
-	if configured == nil {
+func compileRuntime(base *config.Config, overrides map[string]bool) (*runtimeConfig, error) {
+	if base == nil {
 		return nil, errors.New("configuration must not be nil")
 	}
-	configured = configured.Clone()
+	base = base.Clone()
+	configured := base.Clone()
+	for index := range configured.Rules {
+		if enabled, overridden := overrides[configured.Rules[index].Name]; overridden {
+			configured.Rules[index].Enabled = enabled
+		}
+	}
 	if err := configured.Validate(); err != nil {
 		return nil, fmt.Errorf("validate configuration: %w", err)
 	}
@@ -51,6 +59,8 @@ func compileRuntime(configured *config.Config) (*runtimeConfig, error) {
 		corsMode = config.CORSReflect
 	}
 	return &runtimeConfig{
+		base:       base,
+		overrides:  overrides,
 		configured: configured,
 		target:     target,
 		seed:       configured.Seed,
