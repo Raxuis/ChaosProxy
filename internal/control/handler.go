@@ -42,34 +42,34 @@ func NewHandler(bus *events.Bus, runtime Runtime) (*Handler, error) {
 		return nil, errors.New("runtime must not be nil")
 	}
 
-	handler := &Handler{
+	h := &Handler{
 		bus:         bus,
 		runtime:     runtime,
 		heartbeat:   heartbeatInterval,
 		mux:         http.NewServeMux(),
 		crossOrigin: http.NewCrossOriginProtection(),
 	}
-	handler.stopping, handler.stop = context.WithCancel(context.Background())
-	handler.routes()
-	return handler, nil
+	h.stopping, h.stop = context.WithCancel(context.Background())
+	h.routes()
+	return h, nil
 }
 
 // BeginShutdown ends open event streams.
-func (handler *Handler) BeginShutdown() {
-	handler.stop()
+func (h *Handler) BeginShutdown() {
+	h.stop()
 }
 
 // ServeHTTP dispatches control-plane requests.
-func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	if !allowedHost(request.Host) {
-		writeJSONError(writer, http.StatusForbidden, "host not allowed")
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !allowedHost(r.Host) {
+		writeJSONError(w, http.StatusForbidden, "host not allowed")
 		return
 	}
-	if err := handler.crossOrigin.Check(request); err != nil {
-		writeJSONError(writer, http.StatusForbidden, err.Error())
+	if err := h.crossOrigin.Check(r); err != nil {
+		writeJSONError(w, http.StatusForbidden, err.Error())
 		return
 	}
-	handler.mux.ServeHTTP(writer, request)
+	h.mux.ServeHTTP(w, r)
 }
 
 // DNS rebinding attacks need a hostname, so IP literals stay usable from containers.
@@ -81,54 +81,54 @@ func allowedHost(hostport string) bool {
 	return loopback.IsHost(host) || net.ParseIP(host) != nil
 }
 
-func (handler *Handler) routes() {
-	handler.mux.HandleFunc("GET /healthz", handler.health)
-	handler.mux.HandleFunc("GET /api/events", handler.streamEvents)
-	handler.mux.HandleFunc("GET /api/config", handler.getConfig)
-	handler.mux.HandleFunc("PUT /api/rules/{name}", handler.setRuleEnabled)
-	handler.mux.HandleFunc("POST /api/reset", handler.reset)
+func (h *Handler) routes() {
+	h.mux.HandleFunc("GET /healthz", h.health)
+	h.mux.HandleFunc("GET /api/events", h.streamEvents)
+	h.mux.HandleFunc("GET /api/config", h.getConfig)
+	h.mux.HandleFunc("PUT /api/rules/{name}", h.setRuleEnabled)
+	h.mux.HandleFunc("POST /api/reset", h.reset)
 }
 
-func (handler *Handler) health(writer http.ResponseWriter, _ *http.Request) {
-	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-	_, _ = writer.Write([]byte("ok\n"))
+func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ok\n"))
 }
 
-func (handler *Handler) getConfig(writer http.ResponseWriter, _ *http.Request) {
-	writeJSON(writer, http.StatusOK, handler.runtime.CurrentConfig())
+func (h *Handler) getConfig(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, h.runtime.CurrentConfig())
 }
 
-func (handler *Handler) setRuleEnabled(writer http.ResponseWriter, request *http.Request) {
+func (h *Handler) setRuleEnabled(w http.ResponseWriter, r *http.Request) {
 	var update struct {
 		Enabled *bool `json:"enabled"`
 	}
-	if err := decodeJSON(request, &update); err != nil {
-		writeJSONError(writer, http.StatusBadRequest, err.Error())
+	if err := decodeJSON(r, &update); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if update.Enabled == nil {
-		writeJSONError(writer, http.StatusBadRequest, "enabled is required")
+		writeJSONError(w, http.StatusBadRequest, "enabled is required")
 		return
 	}
 
-	name := request.PathValue("name")
-	if err := handler.runtime.SetRuleEnabled(name, *update.Enabled); err != nil {
+	name := r.PathValue("name")
+	if err := h.runtime.SetRuleEnabled(name, *update.Enabled); err != nil {
 		if errors.Is(err, config.ErrRuleNotFound) {
-			writeJSONError(writer, http.StatusNotFound, err.Error())
+			writeJSONError(w, http.StatusNotFound, err.Error())
 			return
 		}
-		writeJSONError(writer, http.StatusInternalServerError, err.Error())
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(writer, http.StatusOK, struct {
+	writeJSON(w, http.StatusOK, struct {
 		Name    string `json:"name"`
 		Enabled bool   `json:"enabled"`
 	}{Name: name, Enabled: *update.Enabled})
 }
 
-func (handler *Handler) reset(writer http.ResponseWriter, _ *http.Request) {
-	handler.runtime.Reset()
-	handler.bus.Reset()
-	writer.WriteHeader(http.StatusNoContent)
+func (h *Handler) reset(w http.ResponseWriter, _ *http.Request) {
+	h.runtime.Reset()
+	h.bus.Reset()
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -7,19 +7,19 @@ import (
 	"github.com/Raxuis/chaosproxy/internal/events"
 )
 
-func (handler *Handler) finishRequest(
-	request *http.Request,
+func (h *Handler) finishRequest(
+	r *http.Request,
 	metrics *requestMetrics,
 	writer *statusResponseWriter,
 	started time.Time,
 ) {
-	logRequest(handler.logger, request, metrics, writer, started)
-	if handler.publisher == nil {
+	logRequest(h.logger, r, metrics, writer, started)
+	if h.publisher == nil {
 		return
 	}
-	handler.publisher.Publish(events.Event{
-		Method:            request.Method,
-		Path:              request.URL.RequestURI(),
+	h.publisher.Publish(events.Event{
+		Method:            r.Method,
+		Path:              r.URL.RequestURI(),
 		Rule:              metrics.rule,
 		Faults:            append([]string(nil), metrics.faults...),
 		InjectedLatencyMs: metrics.injectedLatency.Milliseconds(),

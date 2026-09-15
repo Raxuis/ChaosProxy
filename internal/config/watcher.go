@@ -75,8 +75,8 @@ func NewWatcher(path string, active *Config, apply ApplyFunc, logger *log.Logger
 }
 
 // Run processes changes until ctx is canceled. Run must be called at most once.
-func (watcher *Watcher) Run(ctx context.Context) error {
-	defer watcher.Close()
+func (w *Watcher) Run(ctx context.Context) error {
+	defer w.Close()
 
 	var timer *time.Timer
 	var timerChannel <-chan time.Time
@@ -90,11 +90,11 @@ func (watcher *Watcher) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case event, open := <-watcher.filesystem.Events:
+		case event, open := <-w.filesystem.Events:
 			if !open {
 				return errors.New("config watcher event channel closed")
 			}
-			if !watcher.relevant(event) {
+			if !w.relevant(event) {
 				continue
 			}
 			if timer == nil {
@@ -111,49 +111,49 @@ func (watcher *Watcher) Run(ctx context.Context) error {
 			timerChannel = timer.C
 		case <-timerChannel:
 			timerChannel = nil
-			watcher.reload()
-		case err, open := <-watcher.filesystem.Errors:
+			w.reload()
+		case err, open := <-w.filesystem.Errors:
 			if !open {
 				return errors.New("config watcher error channel closed")
 			}
-			watcher.logger.Printf("config watcher error: %v", err)
+			w.logger.Printf("config watcher error: %v", err)
 		}
 	}
 }
 
 // Close releases operating-system watch resources. It is safe to call more
 // than once.
-func (watcher *Watcher) Close() error {
-	watcher.closeOnce.Do(func() {
-		watcher.closeErr = watcher.filesystem.Close()
+func (w *Watcher) Close() error {
+	w.closeOnce.Do(func() {
+		w.closeErr = w.filesystem.Close()
 	})
-	return watcher.closeErr
+	return w.closeErr
 }
 
-func (watcher *Watcher) relevant(event fsnotify.Event) bool {
-	if filepath.Clean(event.Name) != watcher.path {
+func (w *Watcher) relevant(event fsnotify.Event) bool {
+	if filepath.Clean(event.Name) != w.path {
 		return false
 	}
 	return event.Has(fsnotify.Write) || event.Has(fsnotify.Create) ||
 		event.Has(fsnotify.Rename) || event.Has(fsnotify.Remove)
 }
 
-func (watcher *Watcher) reload() {
-	candidate, err := Load(watcher.path)
+func (w *Watcher) reload() {
+	candidate, err := Load(w.path)
 	if err == nil {
 		err = candidate.Validate()
 	}
 	if err == nil {
-		err = watcher.apply(candidate)
+		err = w.apply(candidate)
 	}
 	if err != nil {
-		watcher.logger.Printf("config reload rejected: %v", err)
+		w.logger.Printf("config reload rejected: %v", err)
 		return
 	}
 
-	summary := summarizeChanges(watcher.active, candidate)
-	watcher.active = candidate
-	watcher.logger.Printf(
+	summary := summarizeChanges(w.active, candidate)
+	w.active = candidate
+	w.logger.Printf(
 		"config reloaded: rules_added=%v rules_removed=%v rules_modified=%v target_changed=%t seed_changed=%t cors_changed=%t",
 		summary.added,
 		summary.removed,

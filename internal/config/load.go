@@ -51,22 +51,22 @@ func decode(contents []byte) (*Config, error) {
 		return nil, err
 	}
 
-	configured := &Config{
+	cfg := &Config{
 		Target:      raw.Target,
 		Seed:        raw.Seed,
 		CORS:        raw.CORS,
 		CORSOrigins: raw.CORSOrigins,
 		Rules:       make([]Rule, len(raw.Rules)),
 	}
-	if configured.CORS == "" {
-		configured.CORS = CORSReflect
+	if cfg.CORS == "" {
+		cfg.CORS = CORSReflect
 	}
 	for index, rawRule := range raw.Rules {
 		enabled := true
 		if rawRule.Enabled != nil {
 			enabled = *rawRule.Enabled
 		}
-		configured.Rules[index] = Rule{
+		cfg.Rules[index] = Rule{
 			Name:     rawRule.Name,
 			Match:    rawRule.Match,
 			Enabled:  enabled,
@@ -77,17 +77,17 @@ func decode(contents []byte) (*Config, error) {
 		}
 	}
 
-	attachSourceLocations(configured, &document)
-	return configured, nil
+	attachSourceLocations(cfg, &document)
+	return cfg, nil
 }
 
-func attachSourceLocations(configured *Config, document *yaml.Node) {
+func attachSourceLocations(cfg *Config, document *yaml.Node) {
 	if len(document.Content) == 0 {
 		return
 	}
 
 	root := document.Content[0]
-	configured.source = sourceLocation{
+	cfg.source = sourceLocation{
 		line:   root.Line,
 		fields: collectFieldLines(root, ""),
 	}
@@ -97,10 +97,10 @@ func attachSourceLocations(configured *Config, document *yaml.Node) {
 		return
 	}
 	for index, ruleNode := range rulesNode.Content {
-		if index >= len(configured.Rules) {
+		if index >= len(cfg.Rules) {
 			break
 		}
-		configured.Rules[index].source = sourceLocation{
+		cfg.Rules[index].source = sourceLocation{
 			line:   ruleNode.Line,
 			fields: collectFieldLines(ruleNode, ""),
 		}

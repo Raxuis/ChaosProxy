@@ -31,8 +31,9 @@ type serverOptions struct {
 }
 
 type namedServer struct {
-	name   string
-	server *http.Server
+	name    string
+	details string
+	server  *http.Server
 }
 
 type serverResult struct {
@@ -43,7 +44,8 @@ type serverResult struct {
 func run(options serverOptions) error {
 	servers := []namedServer{
 		{
-			name: "data plane",
+			name:    "data plane",
+			details: fmt.Sprintf(", forwarding to %s, seed=%d", options.target, options.seed),
 			server: &http.Server{
 				Addr:              net.JoinHostPort(options.host, strconv.Itoa(options.dataPort)),
 				Handler:           options.dataHandler,
@@ -76,8 +78,8 @@ func run(options serverOptions) error {
 	defer stopSignals()
 
 	serverResults := make(chan serverResult, len(servers))
-	for _, configured := range servers {
-		go serve(configured, options, serverResults)
+	for _, srv := range servers {
+		go serve(srv, options.logger, serverResults)
 	}
 
 	var watcherResults chan error
@@ -111,10 +113,10 @@ func run(options serverOptions) error {
 	cancelApplication()
 
 	shutdownContext, cancelShutdown := context.WithTimeout(context.Background(), shutdownTimeout)
-	for _, configured := range servers {
-		if err := configured.server.Shutdown(shutdownContext); err != nil {
-			errorsSeen = append(errorsSeen, fmt.Errorf("shutdown %s: %w", configured.name, err))
-			_ = configured.server.Close()
+	for _, srv := range servers {
+		if err := srv.server.Shutdown(shutdownContext); err != nil {
+			errorsSeen = append(errorsSeen, fmt.Errorf("shutdown %s: %w", srv.name, err))
+			_ = srv.server.Close()
 		}
 	}
 	cancelShutdown()
@@ -134,20 +136,11 @@ func run(options serverOptions) error {
 	return errors.Join(errorsSeen...)
 }
 
-func serve(configured namedServer, options serverOptions, results chan<- serverResult) {
-	if configured.name == "data plane" {
-		options.logger.Printf(
-			"data plane listening on %s, forwarding to %s, seed=%d",
-			configured.server.Addr,
-			options.target,
-			options.seed,
-		)
-	} else {
-		options.logger.Printf("control plane listening on %s", configured.server.Addr)
-	}
-	err := configured.server.ListenAndServe()
+func serve(srv namedServer, logger *log.Logger, results chan<- serverResult) {
+	logger.Printf("%s listening on %s%s", srv.name, srv.server.Addr, srv.details)
+	err := srv.server.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
 		err = nil
 	}
-	results <- serverResult{name: configured.name, err: err}
+	results <- serverResult{name: srv.name, err: err}
 }

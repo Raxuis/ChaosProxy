@@ -10,45 +10,45 @@ import (
 	"github.com/Raxuis/chaosproxy/internal/events"
 )
 
-func (handler *Handler) streamEvents(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "text/event-stream")
-	writer.Header().Set("Cache-Control", "no-cache")
-	writer.Header().Set("X-Accel-Buffering", "no")
+func (h *Handler) streamEvents(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("X-Accel-Buffering", "no")
 
-	subscription := handler.bus.Subscribe()
+	subscription := h.bus.Subscribe()
 	defer subscription.Close()
 	for _, event := range subscription.History() {
-		if err := writeEvent(writer, event); err != nil {
+		if err := writeEvent(w, event); err != nil {
 			return
 		}
 	}
-	if _, err := io.WriteString(writer, ": connected\n\n"); err != nil {
+	if _, err := io.WriteString(w, ": connected\n\n"); err != nil {
 		return
 	}
-	if err := http.NewResponseController(writer).Flush(); err != nil {
+	if err := http.NewResponseController(w).Flush(); err != nil {
 		return
 	}
 
-	heartbeats := time.NewTicker(handler.heartbeat)
+	heartbeats := time.NewTicker(h.heartbeat)
 	defer heartbeats.Stop()
 	for {
 		select {
-		case <-request.Context().Done():
+		case <-r.Context().Done():
 			return
-		case <-handler.stopping.Done():
+		case <-h.stopping.Done():
 			return
 		case event, open := <-subscription.Events():
-			if !open || writeEvent(writer, event) != nil {
+			if !open || writeEvent(w, event) != nil {
 				return
 			}
-			if err := http.NewResponseController(writer).Flush(); err != nil {
+			if err := http.NewResponseController(w).Flush(); err != nil {
 				return
 			}
 		case <-heartbeats.C:
-			if _, err := io.WriteString(writer, ": heartbeat\n\n"); err != nil {
+			if _, err := io.WriteString(w, ": heartbeat\n\n"); err != nil {
 				return
 			}
-			if err := http.NewResponseController(writer).Flush(); err != nil {
+			if err := http.NewResponseController(w).Flush(); err != nil {
 				return
 			}
 		}

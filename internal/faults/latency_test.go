@@ -20,10 +20,7 @@ func TestLatencyFixedSamples(t *testing.T) {
 
 	rng := rand.New(rand.NewPCG(42, 0))
 	for index := 0; index < 1_000; index++ {
-		sample, err := fault.sample(rng)
-		if err != nil {
-			t.Fatalf("sample() unexpected error: %v", err)
-		}
+		sample := fault.sample(rng)
 		if sample < 75*time.Millisecond || sample > 125*time.Millisecond {
 			t.Fatalf("sample() = %s, want value within jitter bounds", sample)
 		}
@@ -46,14 +43,8 @@ func TestLatencyLognormalParametersAndSampling(t *testing.T) {
 		t.Errorf("derived p99 = %s, want %s", derivedP99, p99)
 	}
 
-	first, err := fault.sample(rand.New(rand.NewPCG(7, 0)))
-	if err != nil {
-		t.Fatalf("sample() unexpected error: %v", err)
-	}
-	second, err := fault.sample(rand.New(rand.NewPCG(7, 0)))
-	if err != nil {
-		t.Fatalf("sample() unexpected error: %v", err)
-	}
+	first := fault.sample(rand.New(rand.NewPCG(7, 0)))
+	second := fault.sample(rand.New(rand.NewPCG(7, 0)))
 	if first != second || first <= 0 {
 		t.Fatalf("seeded samples = (%s, %s), want equal positive durations", first, second)
 	}
@@ -63,10 +54,7 @@ func TestLatencyLognormalWithEqualPercentilesIsExact(t *testing.T) {
 	const duration = 400 * time.Millisecond
 	fault := newLatencyFault(config.LatencyConfig{Dist: "lognormal", P50: duration, P99: duration})
 
-	sample, err := fault.sample(rand.New(rand.NewPCG(42, 0)))
-	if err != nil {
-		t.Fatalf("sample() unexpected error: %v", err)
-	}
+	sample := fault.sample(rand.New(rand.NewPCG(42, 0)))
 	if sample != duration {
 		t.Fatalf("sample() = %s, want exact %s", sample, duration)
 	}
@@ -95,12 +83,5 @@ func TestLatencyBeforeHonorsCancellation(t *testing.T) {
 		}
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("Before() did not stop promptly after cancellation")
-	}
-}
-
-func TestLatencyRequiresRequestContext(t *testing.T) {
-	fault := newLatencyFault(config.LatencyConfig{Dist: "fixed"})
-	if _, err := fault.Before(nil); err == nil {
-		t.Fatal("Before(nil) error = nil")
 	}
 }

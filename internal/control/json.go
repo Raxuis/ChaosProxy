@@ -8,8 +8,8 @@ import (
 	"net/http"
 )
 
-func decodeJSON(request *http.Request, destination any) error {
-	decoder := json.NewDecoder(request.Body)
+func decodeJSON(r *http.Request, destination any) error {
+	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(destination); err != nil {
 		return fmt.Errorf("decode JSON body: %w", err)
@@ -24,15 +24,15 @@ func decodeJSON(request *http.Request, destination any) error {
 	return nil
 }
 
-func writeJSON(writer http.ResponseWriter, status int, value any) {
-	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-	writer.Header().Set("Cache-Control", "no-store")
-	writer.WriteHeader(status)
-	_ = json.NewEncoder(writer).Encode(value)
+func writeJSON(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
 }
 
-func writeJSONError(writer http.ResponseWriter, status int, message string) {
-	writeJSON(writer, status, struct {
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, struct {
 		Error string `json:"error"`
 	}{Error: message})
 }

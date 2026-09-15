@@ -27,43 +27,43 @@ func newCORSPolicy(mode config.CORSMode, origins []string) corsPolicy {
 	return policy
 }
 
-func (policy corsPolicy) allows(origin string) bool {
-	if policy.anyOrigin {
+func (p corsPolicy) allows(origin string) bool {
+	if p.anyOrigin {
 		return true
 	}
-	if len(policy.origins) > 0 {
-		_, listed := policy.origins[strings.ToLower(origin)]
+	if len(p.origins) > 0 {
+		_, listed := p.origins[strings.ToLower(origin)]
 		return listed
 	}
 	parsed, err := url.Parse(origin)
 	return err == nil && loopback.IsHost(parsed.Hostname())
 }
 
-func handlePreflight(writer http.ResponseWriter, request *http.Request, policy corsPolicy) bool {
-	requestedMethod := request.Header.Get("Access-Control-Request-Method")
-	if policy.mode != config.CORSReflect || request.Method != http.MethodOptions || requestedMethod == "" {
+func handlePreflight(w http.ResponseWriter, r *http.Request, policy corsPolicy) bool {
+	requestedMethod := r.Header.Get("Access-Control-Request-Method")
+	if policy.mode != config.CORSReflect || r.Method != http.MethodOptions || requestedMethod == "" {
 		return false
 	}
-	origin := request.Header.Get("Origin")
+	origin := r.Header.Get("Origin")
 	if !policy.allows(origin) {
 		return false
 	}
 
-	applyReflectCORS(writer.Header(), origin)
-	writer.Header().Set("Access-Control-Allow-Methods", requestedMethod)
-	if requestedHeaders := request.Header.Get("Access-Control-Request-Headers"); requestedHeaders != "" {
-		writer.Header().Set("Access-Control-Allow-Headers", requestedHeaders)
+	applyReflectCORS(w.Header(), origin)
+	w.Header().Set("Access-Control-Allow-Methods", requestedMethod)
+	if requestedHeaders := r.Header.Get("Access-Control-Request-Headers"); requestedHeaders != "" {
+		w.Header().Set("Access-Control-Allow-Headers", requestedHeaders)
 	}
-	addVary(writer.Header(), "Access-Control-Request-Method")
-	addVary(writer.Header(), "Access-Control-Request-Headers")
-	writer.WriteHeader(http.StatusNoContent)
+	addVary(w.Header(), "Access-Control-Request-Method")
+	addVary(w.Header(), "Access-Control-Request-Headers")
+	w.WriteHeader(http.StatusNoContent)
 	return true
 }
 
-func applyResponseCORS(headers http.Header, request *http.Request, policy corsPolicy) {
+func applyResponseCORS(headers http.Header, r *http.Request, policy corsPolicy) {
 	switch policy.mode {
 	case config.CORSReflect:
-		origin := request.Header.Get("Origin")
+		origin := r.Header.Get("Origin")
 		if origin == "" {
 			return
 		}

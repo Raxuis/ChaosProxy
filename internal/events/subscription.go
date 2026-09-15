@@ -16,27 +16,27 @@ type Subscription struct {
 }
 
 // History returns the events that preceded this subscription, oldest first.
-func (subscription *Subscription) History() []Event {
-	history := make([]Event, len(subscription.history))
-	for index, event := range subscription.history {
+func (s *Subscription) History() []Event {
+	history := make([]Event, len(s.history))
+	for index, event := range s.history {
 		history[index] = cloneEvent(event)
 	}
 	return history
 }
 
 // Events returns the live event stream.
-func (subscription *Subscription) Events() <-chan Event {
-	return subscription.events
+func (s *Subscription) Events() <-chan Event {
+	return s.events
 }
 
 // Dropped reports how many queued live events this subscriber lost.
-func (subscription *Subscription) Dropped() uint64 {
-	return subscription.dropped.Load()
+func (s *Subscription) Dropped() uint64 {
+	return s.dropped.Load()
 }
 
 // Close unregisters the subscription and closes its event stream.
-func (subscription *Subscription) Close() {
-	subscription.closeOnce.Do(func() {
-		subscription.bus.unsubscribe(subscription)
+func (s *Subscription) Close() {
+	s.closeOnce.Do(func() {
+		s.bus.unsubscribe(s)
 	})
 }

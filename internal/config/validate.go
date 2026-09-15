@@ -10,8 +10,8 @@ import (
 )
 
 // Validate returns every semantic configuration error in one error value.
-func (configured *Config) Validate() error {
-	if configured == nil {
+func (c *Config) Validate() error {
+	if c == nil {
 		return errors.New("configuration must not be nil")
 	}
 
@@ -24,16 +24,16 @@ func (configured *Config) Validate() error {
 		issues = append(issues, fmt.Errorf("%s %s", field, message))
 	}
 
-	validateTarget(configured, addIssue)
-	validateCORS(configured, addIssue)
-	validateCORSOrigins(configured, addIssue)
-	validateRules(configured, addIssue)
+	validateTarget(c, addIssue)
+	validateCORS(c, addIssue)
+	validateCORSOrigins(c, addIssue)
+	validateRules(c, addIssue)
 	return errors.Join(issues...)
 }
 
-func validateCORSOrigins(configured *Config, addIssue func(int, string, string)) {
-	line := configured.source.lineFor("cors_origins")
-	for index, origin := range configured.CORSOrigins {
+func validateCORSOrigins(cfg *Config, addIssue func(int, string, string)) {
+	line := cfg.source.lineFor("cors_origins")
+	for index, origin := range cfg.CORSOrigins {
 		if origin == "*" {
 			continue
 		}
@@ -45,23 +45,23 @@ func validateCORSOrigins(configured *Config, addIssue func(int, string, string))
 	}
 }
 
-func validateCORS(configured *Config, addIssue func(int, string, string)) {
-	switch configured.CORS {
+func validateCORS(cfg *Config, addIssue func(int, string, string)) {
+	switch cfg.CORS {
 	case CORSReflect, CORSPassthrough, CORSOff:
 		return
 	default:
-		addIssue(configured.source.lineFor("cors"), "cors", "must be reflect, passthrough, or off")
+		addIssue(cfg.source.lineFor("cors"), "cors", "must be reflect, passthrough, or off")
 	}
 }
 
-func validateTarget(configured *Config, addIssue func(int, string, string)) {
-	line := configured.source.lineFor("target")
-	if configured.Target == "" {
+func validateTarget(cfg *Config, addIssue func(int, string, string)) {
+	line := cfg.source.lineFor("target")
+	if cfg.Target == "" {
 		addIssue(line, "target", "must not be empty")
 		return
 	}
 
-	target, err := url.Parse(configured.Target)
+	target, err := url.Parse(cfg.Target)
 	if err != nil {
 		addIssue(line, "target", fmt.Sprintf("must be a valid URL: %v", err))
 		return
@@ -71,10 +71,10 @@ func validateTarget(configured *Config, addIssue func(int, string, string)) {
 	}
 }
 
-func validateRules(configured *Config, addIssue func(int, string, string)) {
-	names := make(map[string]int, len(configured.Rules))
-	for index := range configured.Rules {
-		rule := &configured.Rules[index]
+func validateRules(cfg *Config, addIssue func(int, string, string)) {
+	names := make(map[string]int, len(cfg.Rules))
+	for index := range cfg.Rules {
+		rule := &cfg.Rules[index]
 		prefix := fmt.Sprintf("rules[%d]", index)
 
 		if rule.Name == "" {
@@ -184,9 +184,9 @@ func validateNonNegativeDuration(
 	}
 }
 
-func (source sourceLocation) lineFor(field string) int {
-	if line := source.fields[field]; line > 0 {
+func (s sourceLocation) lineFor(field string) int {
+	if line := s.fields[field]; line > 0 {
 		return line
 	}
-	return source.line
+	return s.line
 }

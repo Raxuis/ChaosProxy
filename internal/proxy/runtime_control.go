@@ -9,31 +9,31 @@ import (
 )
 
 // Update atomically replaces the file configuration and keeps still-relevant rule toggles.
-func (handler *Handler) Update(base *config.Config) error {
+func (h *Handler) Update(base *config.Config) error {
 	if base == nil {
 		return errors.New("configuration must not be nil")
 	}
 	for {
-		current := handler.current.Load()
+		current := h.current.Load()
 		next, err := compileRuntime(base, keptOverrides(current, base))
 		if err != nil {
 			return err
 		}
-		if handler.current.CompareAndSwap(current, next) {
+		if h.current.CompareAndSwap(current, next) {
 			return nil
 		}
 	}
 }
 
 // CurrentConfig returns a mutable copy of the active configuration, toggles included.
-func (handler *Handler) CurrentConfig() *config.Config {
-	return handler.current.Load().configured.Clone()
+func (h *Handler) CurrentConfig() *config.Config {
+	return h.current.Load().effective.Clone()
 }
 
 // SetRuleEnabled atomically toggles one rule without modifying its YAML source.
-func (handler *Handler) SetRuleEnabled(name string, enabled bool) error {
+func (h *Handler) SetRuleEnabled(name string, enabled bool) error {
 	for {
-		current := handler.current.Load()
+		current := h.current.Load()
 		fileEnabled, found := ruleEnabled(current.base, name)
 		if !found {
 			return fmt.Errorf("%w: %q", config.ErrRuleNotFound, name)
@@ -51,15 +51,15 @@ func (handler *Handler) SetRuleEnabled(name string, enabled bool) error {
 		if err != nil {
 			return err
 		}
-		if handler.current.CompareAndSwap(current, next) {
+		if h.current.CompareAndSwap(current, next) {
 			return nil
 		}
 	}
 }
 
 // Reset restarts every rule's deterministic decision sequence.
-func (handler *Handler) Reset() {
-	handler.ruleCounters.Clear()
+func (h *Handler) Reset() {
+	h.ruleCounters.Clear()
 }
 
 // A toggle is dropped once the file changes that rule's enabled value, so the
@@ -75,8 +75,8 @@ func keptOverrides(current *runtimeConfig, base *config.Config) map[string]bool 
 	return kept
 }
 
-func ruleEnabled(configured *config.Config, name string) (bool, bool) {
-	for _, rule := range configured.Rules {
+func ruleEnabled(cfg *config.Config, name string) (bool, bool) {
+	for _, rule := range cfg.Rules {
 		if rule.Name == name {
 			return rule.Enabled, true
 		}

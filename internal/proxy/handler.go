@@ -43,122 +43,122 @@ type requestState struct {
 
 type requestStateKey struct{}
 
-// NewHandler validates and compiles configured before accepting requests.
-func NewHandler(configured *config.Config, logger *log.Logger, options ...Option) (*Handler, error) {
+// NewHandler validates and compiles cfg before accepting requests.
+func NewHandler(cfg *config.Config, logger *log.Logger, options ...Option) (*Handler, error) {
 	if logger == nil {
 		return nil, errors.New("logger must not be nil")
 	}
-	runtime, err := compileRuntime(configured, nil)
+	runtime, err := compileRuntime(cfg, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	handler := &Handler{logger: logger}
-	handler.stopping, handler.stop = context.WithCancel(context.Background())
+	h := &Handler{logger: logger}
+	h.stopping, h.stop = context.WithCancel(context.Background())
 	for _, option := range options {
 		if option == nil {
 			return nil, errors.New("handler option must not be nil")
 		}
-		if err := option(handler); err != nil {
+		if err := option(h); err != nil {
 			return nil, err
 		}
 	}
-	handler.current.Store(runtime)
-	handler.proxy = &httputil.ReverseProxy{
-		Rewrite:        handler.rewrite,
-		ModifyResponse: handler.modifyResponse,
-		ErrorHandler:   handler.handleProxyError,
+	h.current.Store(runtime)
+	h.proxy = &httputil.ReverseProxy{
+		Rewrite:        h.rewrite,
+		ModifyResponse: h.modifyResponse,
+		ErrorHandler:   h.handleProxyError,
 		ErrorLog:       logger,
 		FlushInterval:  -1,
 	}
-	return handler, nil
+	return h, nil
 }
 
 // ServeHTTP captures one immutable runtime snapshot for the complete request.
-func (handler *Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	started := time.Now()
-	runtime := handler.current.Load()
+	runtime := h.current.Load()
 	state := &requestState{runtime: runtime}
-	request = request.WithContext(context.WithValue(request.Context(), requestStateKey{}, state))
-	state.request = request
-	statusWriter := &statusResponseWriter{ResponseWriter: writer}
-	defer handler.finishRequest(request, &state.metrics, statusWriter, started)
+	r = r.WithContext(context.WithValue(r.Context(), requestStateKey{}, state))
+	state.request = r
+	statusWriter := &statusResponseWriter{ResponseWriter: w}
+	defer h.finishRequest(r, &state.metrics, statusWriter, started)
 
-	if handlePreflight(statusWriter, request, runtime.cors) {
+	if handlePreflight(statusWriter, r, runtime.cors) {
 		return
 	}
 
-	matched := runtime.match.Match(request.Method, request.URL.Path)
+	matched := runtime.match.Match(r.Method, r.URL.Path)
 	if matched != nil {
-		faultRequest, releaseFaultRequest := handler.withShutdownCancel(request)
+		faultRequest, releaseFaultRequest := h.withShutdownCancel(r)
 		defer releaseFaultRequest()
 
 		state.metrics.rule = matched.Name
 		state.chain = runtime.chains[matched.Name]
 		state.faultContext = &faults.Context{
 			Req:  faultRequest,
-			Rng:  rand.New(rand.NewPCG(deriveSeed(runtime.seed, matched.Name, handler.nextRuleIndex(matched.Name)), 0)),
+			Rng:  rand.New(rand.NewPCG(deriveSeed(runtime.seed, matched.Name, h.nextRuleIndex(matched.Name)), 0)),
 			Rule: matched.Name,
 			Emit: state.metrics.record,
 		}
 
 		shortCircuit, err := runBefore(state.faultContext, state.chain)
 		if err != nil {
-			if request.Context().Err() != nil {
+			if r.Context().Err() != nil {
 				return
 			}
-			if handler.stopping.Err() != nil {
+			if h.stopping.Err() != nil {
 				rejectDuringShutdown(statusWriter, state)
 				return
 			}
 			state.metrics.pipelineError = err
-			writeJSONError(statusWriter, request, runtime.cors, http.StatusInternalServerError, "fault injection failed")
+			writeJSONError(statusWriter, r, runtime.cors, http.StatusInternalServerError, "fault injection failed")
 			return
 		}
 		if shortCircuit != nil {
 			if shortCircuit.Hang {
 				<-faultRequest.Context().Done()
-				if request.Context().Err() == nil {
+				if r.Context().Err() == nil {
 					rejectDuringShutdown(statusWriter, state)
 				}
 				return
 			}
-			writeShortCircuit(statusWriter, request, runtime.cors, shortCircuit)
+			writeShortCircuit(statusWriter, r, runtime.cors, shortCircuit)
 			return
 		}
 	}
 
-	handler.proxy.ServeHTTP(statusWriter, request)
+	h.proxy.ServeHTTP(statusWriter, r)
 }
 
 // BeginShutdown interrupts injected hang and latency waits.
-func (handler *Handler) BeginShutdown() {
-	handler.stop()
+func (h *Handler) BeginShutdown() {
+	h.stop()
 }
 
-func (handler *Handler) withShutdownCancel(request *http.Request) (*http.Request, func()) {
-	ctx, cancel := context.WithCancel(request.Context())
-	stopWatching := context.AfterFunc(handler.stopping, cancel)
-	return request.WithContext(ctx), func() {
+func (h *Handler) withShutdownCancel(r *http.Request) (*http.Request, func()) {
+	ctx, cancel := context.WithCancel(r.Context())
+	stopWatching := context.AfterFunc(h.stopping, cancel)
+	return r.WithContext(ctx), func() {
 		stopWatching()
 		cancel()
 	}
 }
 
-func rejectDuringShutdown(writer http.ResponseWriter, state *requestState) {
+func rejectDuringShutdown(w http.ResponseWriter, state *requestState) {
 	state.metrics.pipelineError = errShuttingDown
-	writer.Header().Set("Connection", "close")
-	writeJSONError(writer, state.request, state.runtime.cors, http.StatusServiceUnavailable, "chaosproxy is shutting down")
+	w.Header().Set("Connection", "close")
+	writeJSONError(w, state.request, state.runtime.cors, http.StatusServiceUnavailable, "chaosproxy is shutting down")
 }
 
-func (handler *Handler) rewrite(request *httputil.ProxyRequest) {
+func (h *Handler) rewrite(request *httputil.ProxyRequest) {
 	state := stateFromRequest(request.In)
 	state.metrics.upstreamStarted = time.Now()
 	request.SetURL(state.runtime.target)
 	request.SetXForwarded()
 }
 
-func (handler *Handler) modifyResponse(response *http.Response) error {
+func (h *Handler) modifyResponse(response *http.Response) error {
 	state := stateFromRequest(response.Request)
 	state.metrics.upstreamStatus = response.StatusCode
 	state.metrics.upstreamLatency = time.Since(state.metrics.upstreamStarted)
@@ -174,13 +174,13 @@ func (handler *Handler) modifyResponse(response *http.Response) error {
 	return nil
 }
 
-func (handler *Handler) handleProxyError(writer http.ResponseWriter, request *http.Request, err error) {
-	state := stateFromRequest(request)
+func (h *Handler) handleProxyError(w http.ResponseWriter, r *http.Request, err error) {
+	state := stateFromRequest(r)
 	state.metrics.proxyError = err
 	if !state.metrics.upstreamStarted.IsZero() && state.metrics.upstreamLatency == 0 {
 		state.metrics.upstreamLatency = time.Since(state.metrics.upstreamStarted)
 	}
-	writeJSONError(writer, request, state.runtime.cors, http.StatusBadGateway, "upstream unavailable")
+	writeJSONError(w, r, state.runtime.cors, http.StatusBadGateway, "upstream unavailable")
 }
 
 func runBefore(ctx *faults.Context, chain []faults.Fault) (*faults.ShortCircuit, error) {
@@ -197,35 +197,35 @@ func runBefore(ctx *faults.Context, chain []faults.Fault) (*faults.ShortCircuit,
 }
 
 func writeShortCircuit(
-	writer http.ResponseWriter,
-	request *http.Request,
+	w http.ResponseWriter,
+	r *http.Request,
 	cors corsPolicy,
 	shortCircuit *faults.ShortCircuit,
 ) {
-	copyHeaders(writer.Header(), shortCircuit.Headers)
-	applyResponseCORS(writer.Header(), request, cors)
+	copyHeaders(w.Header(), shortCircuit.Headers)
+	applyResponseCORS(w.Header(), r, cors)
 	status := shortCircuit.Status
 	if status == 0 {
 		status = http.StatusInternalServerError
 	}
-	writer.WriteHeader(status)
+	w.WriteHeader(status)
 	if len(shortCircuit.Body) > 0 {
-		_, _ = writer.Write(shortCircuit.Body)
+		_, _ = w.Write(shortCircuit.Body)
 	}
 }
 
-func writeJSONError(writer http.ResponseWriter, request *http.Request, cors corsPolicy, status int, message string) {
+func writeJSONError(w http.ResponseWriter, r *http.Request, cors corsPolicy, status int, message string) {
 	body, err := json.Marshal(struct {
 		Error string `json:"error"`
 	}{Error: message})
 	if err != nil {
 		body = []byte(`{"error":"internal error"}`)
 	}
-	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-	writer.Header().Set("Cache-Control", "no-store")
-	applyResponseCORS(writer.Header(), request, cors)
-	writer.WriteHeader(status)
-	_, _ = writer.Write(body)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	applyResponseCORS(w.Header(), r, cors)
+	w.WriteHeader(status)
+	_, _ = w.Write(body)
 }
 
 func copyHeaders(destination, source http.Header) {
@@ -234,19 +234,19 @@ func copyHeaders(destination, source http.Header) {
 	}
 }
 
-func stateFromRequest(request *http.Request) *requestState {
-	return request.Context().Value(requestStateKey{}).(*requestState)
+func stateFromRequest(r *http.Request) *requestState {
+	return r.Context().Value(requestStateKey{}).(*requestState)
 }
 
-func (metrics *requestMetrics) record(injection faults.Injection) {
-	metrics.faults = append(metrics.faults, injection.Fault)
-	metrics.injectedLatency += injection.Latency
+func (m *requestMetrics) record(injection faults.Injection) {
+	m.faults = append(m.faults, injection.Fault)
+	m.injectedLatency += injection.Latency
 }
 
-func (handler *Handler) nextRuleIndex(rule string) uint64 {
-	counter, found := handler.ruleCounters.Load(rule)
+func (h *Handler) nextRuleIndex(rule string) uint64 {
+	counter, found := h.ruleCounters.Load(rule)
 	if !found {
-		counter, _ = handler.ruleCounters.LoadOrStore(rule, new(atomic.Uint64))
+		counter, _ = h.ruleCounters.LoadOrStore(rule, new(atomic.Uint64))
 	}
 	return counter.(*atomic.Uint64).Add(1) - 1
 }

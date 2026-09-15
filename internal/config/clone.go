@@ -4,16 +4,16 @@ import "slices"
 
 // Clone returns a deep copy that callers may safely modify before publishing as
 // a new immutable runtime configuration.
-func (configured *Config) Clone() *Config {
-	if configured == nil {
+func (c *Config) Clone() *Config {
+	if c == nil {
 		return nil
 	}
 
-	cloned := *configured
-	cloned.source = cloneSource(configured.source)
-	cloned.CORSOrigins = slices.Clone(configured.CORSOrigins)
-	cloned.Rules = make([]Rule, len(configured.Rules))
-	for index, rule := range configured.Rules {
+	cloned := *c
+	cloned.source = cloneSource(c.source)
+	cloned.CORSOrigins = slices.Clone(c.CORSOrigins)
+	cloned.Rules = make([]Rule, len(c.Rules))
+	for index, rule := range c.Rules {
 		cloned.Rules[index] = cloneRule(rule)
 	}
 	return &cloned

@@ -16,18 +16,18 @@ type latencyJSON struct {
 }
 
 // MarshalJSON writes durations in the YAML notation, such as "800ms".
-func (latency LatencyConfig) MarshalJSON() ([]byte, error) {
+func (l LatencyConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(latencyJSON{
-		Dist:   latency.Dist,
-		Value:  formatDuration(latency.Value),
-		Jitter: formatDuration(latency.Jitter),
-		P50:    formatDuration(latency.P50),
-		P99:    formatDuration(latency.P99),
+		Dist:   l.Dist,
+		Value:  formatDuration(l.Value),
+		Jitter: formatDuration(l.Jitter),
+		P50:    formatDuration(l.P50),
+		P99:    formatDuration(l.P99),
 	})
 }
 
 // UnmarshalJSON reads durations written in the YAML notation.
-func (latency *LatencyConfig) UnmarshalJSON(data []byte) error {
+func (l *LatencyConfig) UnmarshalJSON(data []byte) error {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	var raw latencyJSON
@@ -55,7 +55,7 @@ func (latency *LatencyConfig) UnmarshalJSON(data []byte) error {
 		}
 		*field.target = parsed
 	}
-	*latency = decoded
+	*l = decoded
 	return nil
 }
 

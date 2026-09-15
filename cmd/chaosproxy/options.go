@@ -30,21 +30,21 @@ type optionalInt64 struct {
 	set   bool
 }
 
-func (value *optionalInt64) Set(raw string) error {
+func (o *optionalInt64) Set(raw string) error {
 	parsed, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
 		return fmt.Errorf("parse integer: %w", err)
 	}
-	value.value = parsed
-	value.set = true
+	o.value = parsed
+	o.set = true
 	return nil
 }
 
-func (value *optionalInt64) String() string {
-	if value == nil || !value.set {
+func (o *optionalInt64) String() string {
+	if o == nil || !o.set {
 		return ""
 	}
-	return strconv.FormatInt(value.value, 10)
+	return strconv.FormatInt(o.value, 10)
 }
 
 func parseOptions(args []string, output io.Writer) (options, error) {
@@ -84,26 +84,26 @@ func parseOptions(args []string, output io.Writer) (options, error) {
 }
 
 func resolveConfig(opts options) (*config.Config, error) {
-	var configured *config.Config
+	var cfg *config.Config
 	if opts.configPath == "" {
-		configured = &config.Config{CORS: config.CORSPassthrough}
+		cfg = &config.Config{CORS: config.CORSPassthrough}
 	} else {
 		loaded, err := config.Load(opts.configPath)
 		if err != nil {
 			return nil, err
 		}
-		configured = loaded
+		cfg = loaded
 	}
 
-	applyOverrides(configured, opts)
-	return configured, nil
+	applyOverrides(cfg, opts)
+	return cfg, nil
 }
 
-func applyOverrides(configured *config.Config, opts options) {
+func applyOverrides(cfg *config.Config, opts options) {
 	if opts.target != "" {
-		configured.Target = opts.target
+		cfg.Target = opts.target
 	}
 	if opts.seed.set {
-		configured.Seed = opts.seed.value
+		cfg.Seed = opts.seed.value
 	}
 }

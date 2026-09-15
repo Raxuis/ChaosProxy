@@ -71,32 +71,32 @@ func compileSegment(pattern string) (compiledSegment, error) {
 
 // Only a literal empty segment matches an empty path segment, so "/users/*"
 // does not match "/users/".
-func (segment compiledSegment) matches(value string) bool {
+func (s compiledSegment) matches(value string) bool {
 	switch {
-	case segment.pattern != nil:
-		return segment.pattern.MatchString(value)
-	case segment.anySegment:
+	case s.pattern != nil:
+		return s.pattern.MatchString(value)
+	case s.anySegment:
 		return value != ""
 	default:
-		return value == segment.literal
+		return value == s.literal
 	}
 }
 
-func (pattern compiledPath) matches(path string) bool {
+func (p compiledPath) matches(path string) bool {
 	if path == "" || path[0] != '/' {
 		return false
 	}
-	if pattern.globstar {
-		return pattern.matchesSegments(splitPath(path))
+	if p.globstar {
+		return p.matchesSegments(splitPath(path))
 	}
 
 	rest := path[1:]
-	for index, segment := range pattern.segments {
+	for index, segment := range p.segments {
 		value, next, more := strings.Cut(rest, "/")
 		if !segment.matches(value) {
 			return false
 		}
-		if index == len(pattern.segments)-1 {
+		if index == len(p.segments)-1 {
 			return !more
 		}
 		if !more {
@@ -107,13 +107,13 @@ func (pattern compiledPath) matches(path string) bool {
 	return false
 }
 
-func (pattern compiledPath) matchesSegments(segments []string) bool {
+func (p compiledPath) matchesSegments(segments []string) bool {
 	columns := len(segments) + 1
-	matched := make([]bool, (len(pattern.segments)+1)*columns)
-	matched[len(pattern.segments)*columns+len(segments)] = true
+	matched := make([]bool, (len(p.segments)+1)*columns)
+	matched[len(p.segments)*columns+len(segments)] = true
 
-	for patternIndex := len(pattern.segments) - 1; patternIndex >= 0; patternIndex-- {
-		segment := pattern.segments[patternIndex]
+	for patternIndex := len(p.segments) - 1; patternIndex >= 0; patternIndex-- {
+		segment := p.segments[patternIndex]
 		row := patternIndex * columns
 		next := row + columns
 		for pathIndex := len(segments); pathIndex >= 0; pathIndex-- {

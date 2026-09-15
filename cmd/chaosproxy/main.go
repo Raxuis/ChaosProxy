@@ -23,12 +23,12 @@ func main() {
 		log.Fatalf("invalid arguments: %v", err)
 	}
 
-	configured, err := resolveConfig(opts)
+	cfg, err := resolveConfig(opts)
 	if err != nil {
 		log.Fatalf("load configuration: %v", err)
 	}
 	eventBus := events.NewBus()
-	handler, err := proxy.NewHandler(configured, log.Default(), proxy.WithEventPublisher(eventBus))
+	handler, err := proxy.NewHandler(cfg, log.Default(), proxy.WithEventPublisher(eventBus))
 	if err != nil {
 		log.Fatalf("initialize proxy: %v", err)
 	}
@@ -41,7 +41,7 @@ func main() {
 	if opts.configPath != "" {
 		watcher, err := config.NewWatcher(
 			opts.configPath,
-			configured,
+			cfg,
 			func(candidate *config.Config) error {
 				applyOverrides(candidate, opts)
 				return handler.Update(candidate)
@@ -61,8 +61,8 @@ func main() {
 		host:                 opts.host,
 		dataPort:             opts.port,
 		controlPort:          opts.controlPort,
-		target:               configured.Target,
-		seed:                 configured.Seed,
+		target:               cfg.Target,
+		seed:                 cfg.Seed,
 		dataHandler:          handler,
 		controlHandler:       controlHandler,
 		beginDataShutdown:    handler.BeginShutdown,

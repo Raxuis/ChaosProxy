@@ -16,11 +16,11 @@ type statusFault struct {
 	retryAfter  int
 }
 
-func newStatusFault(configured config.StatusConfig) *statusFault {
+func newStatusFault(cfg config.StatusConfig) *statusFault {
 	return &statusFault{
-		code:        configured.Code,
-		probability: configured.Probability,
-		retryAfter:  configured.RetryAfter,
+		code:        cfg.Code,
+		probability: cfg.Probability,
+		retryAfter:  cfg.RetryAfter,
 	}
 }
 
@@ -28,14 +28,9 @@ func (*statusFault) Name() string {
 	return "status"
 }
 
-func (fault *statusFault) Before(ctx *Context) (*ShortCircuit, error) {
-	if err := validateContext(ctx); err != nil {
-		return nil, err
-	}
-
-	triggered, err := shouldTrigger(ctx.Rng, fault.probability)
-	if err != nil || !triggered {
-		return nil, err
+func (f *statusFault) Before(ctx *Context) (*ShortCircuit, error) {
+	if !shouldTrigger(ctx.Rng, f.probability) {
+		return nil, nil
 	}
 
 	body, err := json.Marshal(struct {
@@ -50,13 +45,13 @@ func (fault *statusFault) Before(ctx *Context) (*ShortCircuit, error) {
 	}
 	headers := make(http.Header)
 	headers.Set("Content-Type", "application/json; charset=utf-8")
-	if fault.retryAfter > 0 {
-		headers.Set("Retry-After", strconv.Itoa(fault.retryAfter))
+	if f.retryAfter > 0 {
+		headers.Set("Retry-After", strconv.Itoa(f.retryAfter))
 	}
-	emit(ctx, Injection{Fault: fault.Name()})
+	emit(ctx, Injection{Fault: f.Name()})
 
 	return &ShortCircuit{
-		Status:  fault.code,
+		Status:  f.code,
 		Headers: headers,
 		Body:    body,
 	}, nil

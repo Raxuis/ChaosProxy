@@ -29,25 +29,17 @@ type truncatedBody struct {
 	remaining int64
 }
 
-func newTruncateFault(configured config.TruncateConfig) *truncateFault {
-	return &truncateFault{probability: configured.Probability, at: configured.At}
+func newTruncateFault(cfg config.TruncateConfig) *truncateFault {
+	return &truncateFault{probability: cfg.Probability, at: cfg.At}
 }
 
 func (*truncateFault) Name() string {
 	return "truncate"
 }
 
-func (fault *truncateFault) After(ctx *Context, response *http.Response) error {
-	if err := validateContext(ctx); err != nil {
-		return err
-	}
-	if response == nil || response.Body == nil {
-		return errors.New("upstream response and body must not be nil")
-	}
-
-	triggered, err := shouldTrigger(ctx.Rng, fault.probability)
-	if err != nil || !triggered || fault.at >= 1 {
-		return err
+func (f *truncateFault) After(ctx *Context, response *http.Response) error {
+	if !shouldTrigger(ctx.Rng, f.probability) || f.at >= 1 {
+		return nil
 	}
 
 	length := response.ContentLength
@@ -64,20 +56,20 @@ func (fault *truncateFault) After(ctx *Context, response *http.Response) error {
 	response.Body = &truncatedBody{
 		Closer:    response.Body,
 		reader:    reader,
-		remaining: int64(math.Floor(float64(length) * fault.at)),
+		remaining: int64(math.Floor(float64(length) * f.at)),
 	}
-	emit(ctx, Injection{Fault: fault.Name()})
+	emit(ctx, Injection{Fault: f.Name()})
 	return nil
 }
 
-func (body *truncatedBody) Read(buffer []byte) (int, error) {
-	if body.remaining <= 0 {
+func (b *truncatedBody) Read(buffer []byte) (int, error) {
+	if b.remaining <= 0 {
 		return 0, errTruncated
 	}
-	if int64(len(buffer)) > body.remaining {
-		buffer = buffer[:body.remaining]
+	if int64(len(buffer)) > b.remaining {
+		buffer = buffer[:b.remaining]
 	}
-	read, err := body.reader.Read(buffer)
-	body.remaining -= int64(read)
+	read, err := b.reader.Read(buffer)
+	b.remaining -= int64(read)
 	return read, err
 }
