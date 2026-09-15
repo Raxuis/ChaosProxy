@@ -4,13 +4,14 @@ package faults
 import (
 	"math/rand"
 	"net/http"
-
-	"github.com/Raxuis/chaosproxy/internal/events"
+	"time"
 )
 
-// Event aliases the shared observability event without making the events
-// module depend on individual fault implementations.
-type Event = events.Event
+// Injection describes one fault applied to a request.
+type Injection struct {
+	Fault   string
+	Latency time.Duration
+}
 
 // Fault can intercept a request before forwarding and transform its upstream
 // response afterward.
@@ -26,7 +27,7 @@ type Context struct {
 	Req  *http.Request
 	Rng  *rand.Rand
 	Rule string
-	Emit func(Event)
+	Emit func(Injection)
 }
 
 // ShortCircuit describes a response that bypasses the upstream.

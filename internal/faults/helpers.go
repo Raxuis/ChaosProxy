@@ -31,8 +31,8 @@ func shouldTrigger(rng *rand.Rand, probability float64) (bool, error) {
 	return rng.Float64() < probability, nil
 }
 
-func emit(ctx *Context, event Event) {
+func emit(ctx *Context, injection Injection) {
 	if ctx.Emit != nil {
-		ctx.Emit(event)
+		ctx.Emit(injection)
 	}
 }

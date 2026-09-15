@@ -53,7 +53,7 @@ func (fault *statusFault) Before(ctx *Context) (*ShortCircuit, error) {
 	if fault.retryAfter > 0 {
 		headers.Set("Retry-After", strconv.Itoa(fault.retryAfter))
 	}
-	emit(ctx, Event{Faults: []string{fault.Name()}, Status: fault.code})
+	emit(ctx, Injection{Fault: fault.Name()})
 
 	return &ShortCircuit{
 		Status:  fault.code,

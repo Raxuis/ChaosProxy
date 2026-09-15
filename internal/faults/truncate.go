@@ -66,7 +66,7 @@ func (fault *truncateFault) After(ctx *Context, response *http.Response) error {
 		reader:    reader,
 		remaining: int64(math.Floor(float64(length) * fault.at)),
 	}
-	emit(ctx, Event{Faults: []string{fault.Name()}})
+	emit(ctx, Injection{Fault: fault.Name()})
 	return nil
 }
 

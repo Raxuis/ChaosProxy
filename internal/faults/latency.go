@@ -51,7 +51,7 @@ func (fault *latencyFault) Before(ctx *Context) (*ShortCircuit, error) {
 	if err := wait(ctx.Req.Context(), delay); err != nil {
 		return nil, err
 	}
-	emit(ctx, Event{Faults: []string{fault.Name()}, InjectedLatencyMs: delay.Milliseconds()})
+	emit(ctx, Injection{Fault: fault.Name(), Latency: delay})
 	return nil, nil
 }
 

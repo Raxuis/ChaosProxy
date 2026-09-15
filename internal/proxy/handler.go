@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/Raxuis/chaosproxy/internal/config"
-	"github.com/Raxuis/chaosproxy/internal/events"
 	"github.com/Raxuis/chaosproxy/internal/faults"
 )
 
@@ -239,9 +238,9 @@ func stateFromRequest(request *http.Request) *requestState {
 	return request.Context().Value(requestStateKey{}).(*requestState)
 }
 
-func (metrics *requestMetrics) record(event events.Event) {
-	metrics.faults = append(metrics.faults, event.Faults...)
-	metrics.injectedLatencyMs += event.InjectedLatencyMs
+func (metrics *requestMetrics) record(injection faults.Injection) {
+	metrics.faults = append(metrics.faults, injection.Fault)
+	metrics.injectedLatency += injection.Latency
 }
 
 func (handler *Handler) nextRuleIndex(rule string) uint64 {

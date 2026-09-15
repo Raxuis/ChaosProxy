@@ -8,14 +8,14 @@ import (
 )
 
 type requestMetrics struct {
-	rule              string
-	faults            []string
-	injectedLatencyMs int64
-	upstreamStarted   time.Time
-	upstreamLatency   time.Duration
-	upstreamStatus    int
-	pipelineError     error
-	proxyError        error
+	rule            string
+	faults          []string
+	injectedLatency time.Duration
+	upstreamStarted time.Time
+	upstreamLatency time.Duration
+	upstreamStatus  int
+	pipelineError   error
+	proxyError      error
 }
 
 type statusResponseWriter struct {
@@ -60,7 +60,7 @@ func logRequest(
 		request.URL.RequestURI(),
 		metrics.rule,
 		faultNames,
-		metrics.injectedLatencyMs,
+		metrics.injectedLatency.Milliseconds(),
 		metrics.upstreamLatency.Milliseconds(),
 		metrics.upstreamStatus,
 		writer.status,

@@ -4,7 +4,11 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
+	"time"
+
+	"github.com/Raxuis/chaosproxy/internal/config"
 )
 
 type beforeOnlyFault struct {
@@ -38,6 +42,29 @@ func TestBaseFaultBeforeIsNoOp(t *testing.T) {
 	shortCircuit, err := (BaseFault{}).Before(newFaultContext())
 	if err != nil || shortCircuit != nil {
 		t.Fatalf("Before() = (%#v, %v), want no-op", shortCircuit, err)
+	}
+}
+
+func TestFaultsReportInjections(t *testing.T) {
+	var injections []Injection
+	ctx := newFaultContext()
+	ctx.Emit = func(injection Injection) {
+		injections = append(injections, injection)
+	}
+
+	if _, err := newLatencyFault(config.LatencyConfig{Dist: "fixed", Value: time.Millisecond}).Before(ctx); err != nil {
+		t.Fatalf("latency Before() unexpected error: %v", err)
+	}
+	if _, err := newStatusFault(config.StatusConfig{Code: 503, Probability: 1}).Before(ctx); err != nil {
+		t.Fatalf("status Before() unexpected error: %v", err)
+	}
+	if _, err := newHangFault(config.HangConfig{Probability: 1}).Before(ctx); err != nil {
+		t.Fatalf("hang Before() unexpected error: %v", err)
+	}
+
+	want := []Injection{{Fault: "latency", Latency: time.Millisecond}, {Fault: "status"}, {Fault: "hang"}}
+	if !reflect.DeepEqual(injections, want) {
+		t.Fatalf("injections = %+v, want %+v", injections, want)
 	}
 }
 
