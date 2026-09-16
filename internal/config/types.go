@@ -25,13 +25,15 @@ type Config struct {
 
 // Rule associates an HTTP route pattern with one or more injected faults.
 type Rule struct {
-	Name     string          `json:"name" yaml:"name"`
-	Match    string          `json:"match" yaml:"match"`
-	Enabled  bool            `json:"enabled" yaml:"enabled"`
-	Latency  *LatencyConfig  `json:"latency,omitempty" yaml:"latency,omitempty"`
-	Status   *StatusConfig   `json:"status,omitempty" yaml:"status,omitempty"`
-	Hang     *HangConfig     `json:"hang,omitempty" yaml:"hang,omitempty"`
-	Truncate *TruncateConfig `json:"truncate,omitempty" yaml:"truncate,omitempty"`
+	Name      string           `json:"name" yaml:"name"`
+	Match     string           `json:"match" yaml:"match"`
+	Enabled   bool             `json:"enabled" yaml:"enabled"`
+	Latency   *LatencyConfig   `json:"latency,omitempty" yaml:"latency,omitempty"`
+	Status    *StatusConfig    `json:"status,omitempty" yaml:"status,omitempty"`
+	Hang      *HangConfig      `json:"hang,omitempty" yaml:"hang,omitempty"`
+	Truncate  *TruncateConfig  `json:"truncate,omitempty" yaml:"truncate,omitempty"`
+	Reset     *ResetConfig     `json:"reset,omitempty" yaml:"reset,omitempty"`
+	Bandwidth *BandwidthConfig `json:"bandwidth,omitempty" yaml:"bandwidth,omitempty"`
 
 	source sourceLocation
 }
@@ -63,6 +65,16 @@ type TruncateConfig struct {
 	At          float64 `json:"at" yaml:"at"`
 }
 
+// ResetConfig configures a TCP connection reset before any response.
+type ResetConfig struct {
+	Probability float64 `json:"probability" yaml:"probability"`
+}
+
+// BandwidthConfig limits how fast the upstream response body reaches the client.
+type BandwidthConfig struct {
+	BytesPerSecond int64 `json:"bytes_per_second" yaml:"bytes_per_second"`
+}
+
 type rawConfig struct {
 	Target      string    `yaml:"target"`
 	Seed        int64     `yaml:"seed"`
@@ -72,13 +84,15 @@ type rawConfig struct {
 }
 
 type rawRule struct {
-	Name     string          `yaml:"name"`
-	Match    string          `yaml:"match"`
-	Enabled  *bool           `yaml:"enabled"`
-	Latency  *LatencyConfig  `yaml:"latency"`
-	Status   *StatusConfig   `yaml:"status"`
-	Hang     *HangConfig     `yaml:"hang"`
-	Truncate *TruncateConfig `yaml:"truncate"`
+	Name      string           `yaml:"name"`
+	Match     string           `yaml:"match"`
+	Enabled   *bool            `yaml:"enabled"`
+	Latency   *LatencyConfig   `yaml:"latency"`
+	Status    *StatusConfig    `yaml:"status"`
+	Hang      *HangConfig      `yaml:"hang"`
+	Truncate  *TruncateConfig  `yaml:"truncate"`
+	Reset     *ResetConfig     `yaml:"reset"`
+	Bandwidth *BandwidthConfig `yaml:"bandwidth"`
 }
 
 type sourceLocation struct {

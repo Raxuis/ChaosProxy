@@ -1,7 +1,7 @@
 # Task 07 — Embedded web UI
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-16
+- Status: `completed`
+- Approval: granted on 2026-09-16
 - Depends on: task 06
 
 ## Goal
@@ -16,7 +16,7 @@ Add an offline-capable, dependency-free traffic dashboard suitable for a README 
 - [x] Add filters, pause, and automatic SSE reconnection feedback.
 - [x] Verify keyboard usability, responsive layout, and dark default styling.
 - [x] Test static serving and core UI behavior where practical.
-- [ ] Receive explicit user visual approval.
+- [x] Receive explicit user visual approval.
 
 ## Acceptance evidence
 
@@ -48,3 +48,4 @@ Add an offline-capable, dependency-free traffic dashboard suitable for a README 
 |---|---|
 | 2026-09-16 | Direction chosen with the user: instrumented console, traffic ribbon, arrival motion; vanilla CSS kept over React, htmx, and Tailwind. |
 | 2026-09-16 | Dashboard implemented and verified in the browser; ribbon widened after user feedback; approval requested. |
+| 2026-09-16 | User approved the dashboard. |

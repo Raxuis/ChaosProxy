@@ -27,3 +27,13 @@ rules:
     truncate:
       probability: 0.1
       at: 0.5
+
+  - name: reset-checkout
+    match: POST /api/checkout
+    reset:
+      probability: 0.2
+
+  - name: slow-assets
+    match: GET /static/**
+    bandwidth:
+      bytes_per_second: 32768

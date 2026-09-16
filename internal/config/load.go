@@ -67,13 +67,15 @@ func decode(contents []byte) (*Config, error) {
 			enabled = *rawRule.Enabled
 		}
 		cfg.Rules[index] = Rule{
-			Name:     rawRule.Name,
-			Match:    rawRule.Match,
-			Enabled:  enabled,
-			Latency:  rawRule.Latency,
-			Status:   rawRule.Status,
-			Hang:     rawRule.Hang,
-			Truncate: rawRule.Truncate,
+			Name:      rawRule.Name,
+			Match:     rawRule.Match,
+			Enabled:   enabled,
+			Latency:   rawRule.Latency,
+			Status:    rawRule.Status,
+			Hang:      rawRule.Hang,
+			Truncate:  rawRule.Truncate,
+			Reset:     rawRule.Reset,
+			Bandwidth: rawRule.Bandwidth,
 		}
 	}
 

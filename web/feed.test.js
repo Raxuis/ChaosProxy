@@ -72,4 +72,8 @@ test("ruleFaults describes every configured fault", () => {
     ["latency 800ms ±200ms", "503 · 30%", "hang · 10%", "truncate 50% · 12.5%"],
   );
   assert.deepEqual(ruleFaults({ latency: { dist: "lognormal", p50: "400ms", p99: "3s" } }), ["latency p50 400ms p99 3s"]);
+  assert.deepEqual(
+    ruleFaults({ reset: { probability: 0.2 }, bandwidth: { bytes_per_second: 32768 } }),
+    ["reset · 20%", "bandwidth 32 KB/s"],
+  );
 });

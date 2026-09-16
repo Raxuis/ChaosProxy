@@ -38,6 +38,14 @@ func cloneRule(rule Rule) Rule {
 		value := *rule.Truncate
 		cloned.Truncate = &value
 	}
+	if rule.Reset != nil {
+		value := *rule.Reset
+		cloned.Reset = &value
+	}
+	if rule.Bandwidth != nil {
+		value := *rule.Bandwidth
+		cloned.Bandwidth = &value
+	}
 	return cloned
 }
 

@@ -25,8 +25,8 @@ Every task follows this state machine:
 | 04 | 1 | Proxy pipeline and CORS | `completed` | [task-04-pipeline-and-cors.md](docs/progress/task-04-pipeline-and-cors.md) |
 | 05 | 1 | Configuration hot reload | `completed` | [task-05-hot-reload.md](docs/progress/task-05-hot-reload.md) |
 | 06 | 2 | Event bus and control plane | `completed` | [task-06-events-and-control-plane.md](docs/progress/task-06-events-and-control-plane.md) |
-| 07 | 2 | Embedded web UI | `awaiting_validation` | [task-07-web-ui.md](docs/progress/task-07-web-ui.md) |
-| 08 | 2 | TCP reset and bandwidth faults | `pending` | [task-08-reset-and-bandwidth.md](docs/progress/task-08-reset-and-bandwidth.md) |
+| 07 | 2 | Embedded web UI | `completed` | [task-07-web-ui.md](docs/progress/task-07-web-ui.md) |
+| 08 | 2 | TCP reset and bandwidth faults | `awaiting_validation` | [task-08-reset-and-bandwidth.md](docs/progress/task-08-reset-and-bandwidth.md) |
 | 09 | 3 | Determinism and header override | `pending` | [task-09-determinism-and-override.md](docs/progress/task-09-determinism-and-override.md) |
 | 10 | 3 | Scenario mode | `pending` | [task-10-scenario-mode.md](docs/progress/task-10-scenario-mode.md) |
 | 11 | 3 | JSON payload mutation | `pending` | [task-11-payload-mutation.md](docs/progress/task-11-payload-mutation.md) |

@@ -36,6 +36,7 @@ type ShortCircuit struct {
 	Headers http.Header
 	Body    []byte
 	Hang    bool
+	Reset   bool
 }
 
 // BaseFault provides no-op hooks for faults that affect only one pipeline phase.

@@ -48,6 +48,63 @@ cors_origins:
 	}
 }
 
+func TestValidateResetAndBandwidth(t *testing.T) {
+	t.Parallel()
+
+	valid, err := config.Load(writeConfig(t, `
+target: http://localhost:9000
+rules:
+  - name: reset-checkout
+    match: POST /api/checkout
+    reset:
+      probability: 0.2
+  - name: slow-assets
+    match: GET /static/**
+    bandwidth:
+      bytes_per_second: 32768
+`))
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	if err := valid.Validate(); err != nil {
+		t.Fatalf("Validate() unexpected error: %v", err)
+	}
+	if valid.Rules[0].Reset.Probability != 0.2 || valid.Rules[1].Bandwidth.BytesPerSecond != 32768 {
+		t.Fatalf("rules = %+v %+v, want parsed reset and bandwidth", valid.Rules[0].Reset, valid.Rules[1].Bandwidth)
+	}
+
+	invalid, err := config.Load(writeConfig(t, `
+target: http://localhost:9000
+rules:
+  - name: reset-checkout
+    match: POST /api/checkout
+    reset:
+      probability: 1.5
+  - name: slow-assets
+    match: GET /static/**
+    bandwidth:
+      bytes_per_second: 0
+`))
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	err = invalid.Validate()
+	if err == nil {
+		t.Fatal("Validate() error = nil, want reset and bandwidth errors")
+	}
+	for _, expected := range []string{
+		"rules[0].reset.probability must be between 0 and 1",
+		"rules[1].bandwidth.bytes_per_second must be greater than zero",
+	} {
+		if !strings.Contains(err.Error(), expected) {
+			t.Errorf("Validate() error does not contain %q:\n%s", expected, err)
+		}
+	}
+	if strings.Contains(err.Error(), "at least one fault") {
+		t.Errorf("Validate() treated reset or bandwidth as a missing fault:\n%s", err)
+	}
+}
+
 func TestValidateReturnsAllErrorsWithSourceLines(t *testing.T) {
 	t.Parallel()
 

@@ -13,13 +13,20 @@ func TestConfigCloneOwnsNestedValues(t *testing.T) {
 		Target:      "http://localhost",
 		CORSOrigins: []string{"http://localhost:3001"},
 		Rules: []config.Rule{{
-			Name:    "fault",
-			Match:   "GET /api",
-			Enabled: true,
-			Status:  &config.StatusConfig{Code: 503, Probability: 1},
+			Name:      "fault",
+			Match:     "GET /api",
+			Enabled:   true,
+			Status:    &config.StatusConfig{Code: 503, Probability: 1},
+			Reset:     &config.ResetConfig{Probability: 0.5},
+			Bandwidth: &config.BandwidthConfig{BytesPerSecond: 1024},
 		}},
 	}
 	cloned := original.Clone()
+	cloned.Rules[0].Reset.Probability = 1
+	cloned.Rules[0].Bandwidth.BytesPerSecond = 1
+	if original.Rules[0].Reset.Probability != 0.5 || original.Rules[0].Bandwidth.BytesPerSecond != 1024 {
+		t.Fatalf("mutating clone changed original reset or bandwidth: %+v", original.Rules[0])
+	}
 	cloned.Target = "http://other"
 	cloned.CORSOrigins[0] = "https://changed.test"
 	cloned.Rules[0].Name = "changed"

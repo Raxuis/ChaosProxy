@@ -116,6 +116,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if shortCircuit != nil {
+			if shortCircuit.Reset {
+				resetConnection(statusWriter, state)
+				return
+			}
 			if shortCircuit.Hang {
 				<-faultRequest.Context().Done()
 				if r.Context().Err() == nil {
@@ -143,6 +147,19 @@ func (h *Handler) withShutdownCancel(r *http.Request) (*http.Request, func()) {
 		stopWatching()
 		cancel()
 	}
+}
+
+// A zero linger makes Close send a TCP RST instead of a graceful FIN.
+func resetConnection(w http.ResponseWriter, state *requestState) {
+	conn, _, err := http.NewResponseController(w).Hijack()
+	if err != nil {
+		state.metrics.pipelineError = fmt.Errorf("reset aborted the stream because the connection cannot be hijacked: %w", err)
+		panic(http.ErrAbortHandler)
+	}
+	if lingerer, ok := conn.(interface{ SetLinger(sec int) error }); ok {
+		_ = lingerer.SetLinger(0)
+	}
+	_ = conn.Close()
 }
 
 func rejectDuringShutdown(w http.ResponseWriter, state *requestState) {

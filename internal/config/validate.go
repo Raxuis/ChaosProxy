@@ -92,7 +92,8 @@ func validateRules(cfg *Config, addIssue func(int, string, string)) {
 		if strings.TrimSpace(rule.Match) == "" {
 			addIssue(rule.source.lineFor("match"), prefix+".match", "must not be empty")
 		}
-		if rule.Latency == nil && rule.Status == nil && rule.Hang == nil && rule.Truncate == nil {
+		if rule.Latency == nil && rule.Status == nil && rule.Hang == nil && rule.Truncate == nil &&
+			rule.Reset == nil && rule.Bandwidth == nil {
 			addIssue(rule.source.line, prefix, "must configure at least one fault")
 		}
 
@@ -100,6 +101,12 @@ func validateRules(cfg *Config, addIssue func(int, string, string)) {
 		validateStatus(rule, prefix, addIssue)
 		validateProbability(rule, prefix, "hang.probability", probabilityOfHang(rule), addIssue)
 		validateTruncate(rule, prefix, addIssue)
+		if rule.Reset != nil {
+			validateProbability(rule, prefix, "reset.probability", rule.Reset.Probability, addIssue)
+		}
+		if rule.Bandwidth != nil && rule.Bandwidth.BytesPerSecond <= 0 {
+			addIssue(rule.source.lineFor("bandwidth.bytes_per_second"), prefix+".bandwidth.bytes_per_second", "must be greater than zero")
+		}
 	}
 }
 

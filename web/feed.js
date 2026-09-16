@@ -83,13 +83,16 @@ export function formatTime(timestamp) {
 
 export function ruleFaults(rule) {
   const labels = [];
-  const { latency, status, hang, truncate } = rule;
+  const { latency, reset, status, hang, truncate, bandwidth } = rule;
   if (latency?.dist === "fixed") {
     const value = latency.value ?? "0s";
     labels.push(latency.jitter ? `latency ${value} ±${latency.jitter}` : `latency ${value}`);
   }
   if (latency?.dist === "lognormal") {
     labels.push(`latency p50 ${latency.p50} p99 ${latency.p99}`);
+  }
+  if (reset) {
+    labels.push(`reset · ${percent(reset.probability)}`);
   }
   if (status) {
     labels.push(`${status.code} · ${percent(status.probability)}`);
@@ -99,6 +102,9 @@ export function ruleFaults(rule) {
   }
   if (truncate) {
     labels.push(`truncate ${percent(truncate.at)} · ${percent(truncate.probability)}`);
+  }
+  if (bandwidth) {
+    labels.push(`bandwidth ${formatBytes(bandwidth.bytes_per_second)}/s`);
   }
   return labels;
 }

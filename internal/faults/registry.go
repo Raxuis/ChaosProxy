@@ -4,9 +4,12 @@ import "github.com/Raxuis/chaosproxy/internal/config"
 
 // Build creates the fault chain of a rule that passed config.Validate.
 func Build(rule config.Rule) []Fault {
-	chain := make([]Fault, 0, 4)
+	chain := make([]Fault, 0, 6)
 	if rule.Latency != nil {
 		chain = append(chain, newLatencyFault(*rule.Latency))
+	}
+	if rule.Reset != nil {
+		chain = append(chain, newResetFault(*rule.Reset))
 	}
 	if rule.Status != nil {
 		chain = append(chain, newStatusFault(*rule.Status))
@@ -16,6 +19,9 @@ func Build(rule config.Rule) []Fault {
 	}
 	if rule.Truncate != nil {
 		chain = append(chain, newTruncateFault(*rule.Truncate))
+	}
+	if rule.Bandwidth != nil {
+		chain = append(chain, newBandwidthFault(*rule.Bandwidth))
 	}
 	return chain
 }

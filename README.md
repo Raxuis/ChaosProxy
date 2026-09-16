@@ -91,6 +91,28 @@ compute the cut, and longer ones are cut at `at` of that first MiB. Avoid
 truncate rules on endless streams such as Server-Sent Events: nothing is sent
 until 1 MiB has arrived.
 
+## Connection resets and bandwidth
+
+`reset` closes the client connection with a TCP RST before any response, so
+clients see `ECONNRESET`. When the connection cannot be taken over, as with
+HTTP/2, the proxy aborts the stream instead and logs why.
+
+`bandwidth` limits how fast the upstream body reaches the client without
+buffering it, so `Content-Length` and streaming stay intact:
+
+```yaml
+rules:
+  - name: reset-checkout
+    match: POST /api/checkout
+    reset:
+      probability: 0.2
+
+  - name: slow-assets
+    match: GET /static/**
+    bandwidth:
+      bytes_per_second: 32768
+```
+
 ## Reproducibility
 
 Each rule draws its decisions from the seed, the rule name, and the number of
