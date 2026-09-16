@@ -54,6 +54,7 @@ Available flags:
 --port PORT    data-plane listen port (default 7070)
 --control-port PORT  control-plane listen port (default 7071)
 --seed N       random seed; overrides the YAML value
+--header-overrides  let clients force faults with the X-Chaos header
 ```
 
 At least one of `--config` or `--target` is required.
@@ -119,6 +120,35 @@ Each rule draws its decisions from the seed, the rule name, and the number of
 requests that rule has matched. Unmatched requests and other rules never shift
 a rule's sequence, and `POST /api/reset` restarts every sequence. Concurrent
 requests to the same rule can still arrive in a different order between runs.
+
+Without `seed` in the file or `--seed`, Chaos Proxy generates a random seed and
+logs it at startup. Pass it back with `--seed` to replay the run.
+
+## Header overrides
+
+Start the proxy with `--header-overrides` to let a client force faults for a
+single request, which keeps end-to-end tests explicit:
+
+```http
+GET /api/orders
+X-Chaos: latency=800ms; status=503
+```
+
+| Directive | Effect |
+|---|---|
+| `latency=800ms` | wait before handling the request |
+| `status=503` | respond with this status without calling the upstream |
+| `hang` | never respond |
+| `reset` | reset the TCP connection |
+| `truncate=0.5` | cut the response body at this fraction |
+| `bandwidth=32768` | deliver the body at this many bytes per second |
+| `off` | forward the request without any fault |
+
+The header replaces rule matching for that request, never shifts rule decision
+sequences, and is removed before the request reaches the upstream. `status`,
+`hang` and `reset` cannot be combined. Responses carry `X-Chaos-Applied` with the
+forced faults, `off`, or `disabled` when the proxy runs without
+`--header-overrides`. An invalid header gets a `400` response explaining why.
 
 ## Security defaults
 

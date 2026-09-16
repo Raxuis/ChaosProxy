@@ -72,6 +72,60 @@ func TestParseOptions(t *testing.T) {
 	}
 }
 
+func TestParseOptionsHeaderOverrides(t *testing.T) {
+	t.Parallel()
+
+	disabled, err := parseOptions([]string{"--target", "http://localhost"}, io.Discard)
+	if err != nil || disabled.headerOverrides {
+		t.Fatalf("default headerOverrides = %t, %v; want false", disabled.headerOverrides, err)
+	}
+	enabled, err := parseOptions([]string{"--target", "http://localhost", "--header-overrides"}, io.Discard)
+	if err != nil || !enabled.headerOverrides {
+		t.Fatalf("--header-overrides = %t, %v; want true", enabled.headerOverrides, err)
+	}
+}
+
+func TestResolveConfigSeedSources(t *testing.T) {
+	t.Parallel()
+
+	withoutSeed := filepath.Join(t.TempDir(), "chaos.yaml")
+	if err := os.WriteFile(withoutSeed, []byte("target: http://configured:9000\n"), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	zeroSeed := filepath.Join(t.TempDir(), "chaos.yaml")
+	if err := os.WriteFile(zeroSeed, []byte("target: http://configured:9000\nseed: 0\n"), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	generated := options{configPath: withoutSeed}
+	cfg, err := resolveConfig(&generated)
+	if err != nil {
+		t.Fatalf("resolveConfig() unexpected error: %v", err)
+	}
+	if cfg.Seed != generated.generatedSeed {
+		t.Errorf("seed = %d, want generated seed %d", cfg.Seed, generated.generatedSeed)
+	}
+
+	reloaded, err := config.Load(withoutSeed)
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	applyOverrides(reloaded, generated)
+	if reloaded.Seed != generated.generatedSeed {
+		t.Errorf("reloaded seed = %d, want the same generated seed %d", reloaded.Seed, generated.generatedSeed)
+	}
+
+	explicitZero := options{configPath: zeroSeed}
+	if cfg, err := resolveConfig(&explicitZero); err != nil || cfg.Seed != 0 {
+		t.Errorf("explicit seed 0 = %d, %v; want 0", cfg.Seed, err)
+	}
+
+	flag := options{configPath: zeroSeed, seed: optionalInt64{value: 7, set: true}}
+	if cfg, err := resolveConfig(&flag); err != nil || cfg.Seed != 7 {
+		t.Errorf("--seed 7 = %d, %v; want 7", cfg.Seed, err)
+	}
+}
+
 func TestParseOptionsHelp(t *testing.T) {
 	t.Parallel()
 
@@ -90,11 +144,12 @@ func TestResolveConfig(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	configured, err := resolveConfig(options{
+	opts := options{
 		configPath: path,
 		target:     "http://override:9001",
 		seed:       optionalInt64{value: 42, set: true},
-	})
+	}
+	configured, err := resolveConfig(&opts)
 	if err != nil {
 		t.Fatalf("resolveConfig() unexpected error: %v", err)
 	}
@@ -106,7 +161,7 @@ func TestResolveConfig(t *testing.T) {
 func TestResolveConfigWithoutFileIsPurePassthrough(t *testing.T) {
 	t.Parallel()
 
-	configured, err := resolveConfig(options{target: "http://localhost:9000"})
+	configured, err := resolveConfig(&options{target: "http://localhost:9000"})
 	if err != nil {
 		t.Fatalf("resolveConfig() unexpected error: %v", err)
 	}

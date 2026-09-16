@@ -1,7 +1,7 @@
 # Task 08 — TCP reset and bandwidth faults
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-16
+- Status: `completed`
+- Approval: granted on 2026-09-16
 - Depends on: task 07
 
 ## Goal
@@ -17,7 +17,7 @@ Add real TCP resets and streaming-safe response throttling.
 - [x] Test connection failure semantics and progressive throttled delivery.
 - [x] Run `go test ./...`.
 - [x] Manually verify the live UI and SSE reconnection after restart.
-- [ ] Receive explicit user approval for phase 2.
+- [x] Receive explicit user approval for phase 2.
 
 ## Acceptance evidence
 
@@ -45,3 +45,4 @@ Add real TCP resets and streaming-safe response throttling.
 | Date | Note |
 |---|---|
 | 2026-09-16 | Reset and bandwidth faults implemented and verified; approval for task 08 and phase 2 requested. |
+| 2026-09-16 | User approved task 08 and phase 2. |

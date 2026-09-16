@@ -22,13 +22,14 @@ import (
 // Handler applies a request-captured runtime configuration without locking the
 // data-plane path.
 type Handler struct {
-	current      atomic.Pointer[runtimeConfig]
-	ruleCounters sync.Map
-	proxy        *httputil.ReverseProxy
-	logger       *log.Logger
-	publisher    EventPublisher
-	stopping     context.Context
-	stop         context.CancelFunc
+	current         atomic.Pointer[runtimeConfig]
+	ruleCounters    sync.Map
+	proxy           *httputil.ReverseProxy
+	logger          *log.Logger
+	publisher       EventPublisher
+	headerOverrides bool
+	stopping        context.Context
+	stop            context.CancelFunc
 }
 
 var errShuttingDown = errors.New("proxy shutting down")
@@ -88,17 +89,29 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	matched := runtime.match.Match(r.Method, r.URL.Path)
-	if matched != nil {
+	selection, err := h.selectFaults(runtime, r)
+	if err != nil {
+		state.metrics.pipelineError = err
+		writeJSONError(statusWriter, r, runtime.cors, http.StatusBadRequest, err.Error())
+		return
+	}
+	state.metrics.rule = selection.rule
+	if selection.applied != "" {
+		statusWriter.Header().Set(appliedHeader, selection.applied)
+		if runtime.cors.mode == config.CORSReflect {
+			statusWriter.Header().Add("Access-Control-Expose-Headers", appliedHeader)
+		}
+	}
+
+	if len(selection.chain) > 0 {
 		faultRequest, releaseFaultRequest := h.withShutdownCancel(r)
 		defer releaseFaultRequest()
 
-		state.metrics.rule = matched.Name
-		state.chain = runtime.chains[matched.Name]
+		state.chain = selection.chain
 		state.faultContext = &faults.Context{
 			Req:  faultRequest,
-			Rng:  rand.New(rand.NewPCG(deriveSeed(runtime.seed, matched.Name, h.nextRuleIndex(matched.Name)), 0)),
-			Rule: matched.Name,
+			Rng:  rand.New(rand.NewPCG(deriveSeed(runtime.seed, selection.rule, selection.index), 0)),
+			Rule: selection.rule,
 			Emit: state.metrics.record,
 		}
 
@@ -173,6 +186,9 @@ func (h *Handler) rewrite(request *httputil.ProxyRequest) {
 	state.metrics.upstreamStarted = time.Now()
 	request.SetURL(state.runtime.target)
 	request.SetXForwarded()
+	if h.headerOverrides {
+		request.Out.Header.Del(overrideHeader)
+	}
 }
 
 func (h *Handler) modifyResponse(response *http.Response) error {

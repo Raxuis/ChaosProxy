@@ -26,6 +26,12 @@ func Load(path string) (*Config, error) {
 	return parsed, nil
 }
 
+// SeedConfigured reports whether the loaded YAML sets seed explicitly, even to zero.
+func (c *Config) SeedConfigured() bool {
+	_, found := c.source.fields["seed"]
+	return found
+}
+
 func decode(contents []byte) (*Config, error) {
 	decoder := yaml.NewDecoder(bytes.NewReader(contents))
 	decoder.KnownFields(true)

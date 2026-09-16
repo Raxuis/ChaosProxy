@@ -23,12 +23,20 @@ func main() {
 		log.Fatalf("invalid arguments: %v", err)
 	}
 
-	cfg, err := resolveConfig(opts)
+	cfg, err := resolveConfig(&opts)
 	if err != nil {
 		log.Fatalf("load configuration: %v", err)
 	}
+	if !opts.seed.set && !cfg.SeedConfigured() {
+		log.Printf("no seed configured; generated seed %d, replay this run with --seed %d", cfg.Seed, cfg.Seed)
+	}
 	eventBus := events.NewBus()
-	handler, err := proxy.NewHandler(cfg, log.Default(), proxy.WithEventPublisher(eventBus))
+	handlerOptions := []proxy.Option{proxy.WithEventPublisher(eventBus)}
+	if opts.headerOverrides {
+		handlerOptions = append(handlerOptions, proxy.WithHeaderOverrides())
+		log.Printf("header overrides enabled: clients can force faults with the X-Chaos header")
+	}
+	handler, err := proxy.NewHandler(cfg, log.Default(), handlerOptions...)
 	if err != nil {
 		log.Fatalf("initialize proxy: %v", err)
 	}

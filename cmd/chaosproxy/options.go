@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"strconv"
 
 	"github.com/Raxuis/chaosproxy/internal/config"
@@ -17,12 +18,14 @@ const (
 )
 
 type options struct {
-	configPath  string
-	target      string
-	host        string
-	port        int
-	controlPort int
-	seed        optionalInt64
+	configPath      string
+	target          string
+	host            string
+	port            int
+	controlPort     int
+	seed            optionalInt64
+	generatedSeed   int64
+	headerOverrides bool
 }
 
 type optionalInt64 struct {
@@ -58,6 +61,7 @@ func parseOptions(args []string, output io.Writer) (options, error) {
 	flags.IntVar(&opts.port, "port", defaultPort, "data-plane listen port")
 	flags.IntVar(&opts.controlPort, "control-port", defaultControlPort, "control-plane listen port")
 	flags.Var(&opts.seed, "seed", "random seed (overrides config)")
+	flags.BoolVar(&opts.headerOverrides, "header-overrides", false, "let clients force faults with the X-Chaos request header")
 
 	if err := flags.Parse(args); err != nil {
 		return options{}, err
@@ -83,7 +87,7 @@ func parseOptions(args []string, output io.Writer) (options, error) {
 	return opts, nil
 }
 
-func resolveConfig(opts options) (*config.Config, error) {
+func resolveConfig(opts *options) (*config.Config, error) {
 	var cfg *config.Config
 	if opts.configPath == "" {
 		cfg = &config.Config{CORS: config.CORSPassthrough}
@@ -95,7 +99,8 @@ func resolveConfig(opts options) (*config.Config, error) {
 		cfg = loaded
 	}
 
-	applyOverrides(cfg, opts)
+	opts.generatedSeed = rand.Int64()
+	applyOverrides(cfg, *opts)
 	return cfg, nil
 }
 
@@ -103,7 +108,10 @@ func applyOverrides(cfg *config.Config, opts options) {
 	if opts.target != "" {
 		cfg.Target = opts.target
 	}
-	if opts.seed.set {
+	switch {
+	case opts.seed.set:
 		cfg.Seed = opts.seed.value
+	case !cfg.SeedConfigured():
+		cfg.Seed = opts.generatedSeed
 	}
 }

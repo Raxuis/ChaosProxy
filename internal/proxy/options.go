@@ -17,11 +17,19 @@ type Option func(*Handler) error
 
 // WithEventPublisher publishes one completed event per data-plane request.
 func WithEventPublisher(publisher EventPublisher) Option {
-	return func(handler *Handler) error {
+	return func(h *Handler) error {
 		if publisher == nil {
 			return errors.New("event publisher must not be nil")
 		}
-		handler.publisher = publisher
+		h.publisher = publisher
+		return nil
+	}
+}
+
+// WithHeaderOverrides lets clients force faults for one request with the X-Chaos header.
+func WithHeaderOverrides() Option {
+	return func(h *Handler) error {
+		h.headerOverrides = true
 		return nil
 	}
 }
