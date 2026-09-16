@@ -1,5 +1,5 @@
 export const FEED_CAP = 200;
-export const RIBBON_CAP = 120;
+export const RIBBON_CAP = 600;
 
 const counts = new Intl.NumberFormat("en-US");
 

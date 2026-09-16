@@ -71,7 +71,7 @@ POST /api/reset
 ```
 
 Open `http://localhost:7071/` for the dashboard. It shows the target and seed,
-request totals, a ribbon of the last 120 requests, every rule with its toggle
+request totals, a full-width ribbon of recent requests, every rule with its toggle
 and trigger counts, and a live request feed. Press `/` to filter the feed and
 `p` to pause it. The dashboard works offline and loads nothing from the network.
 

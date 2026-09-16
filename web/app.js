@@ -14,6 +14,7 @@ import {
 
 const POLL_INTERVAL_MS = 2000;
 const RETRY_DELAY_MS = 3000;
+const FLUSH_INTERVAL_MS = 100;
 const ANIMATED_BATCH_LIMIT = 8;
 
 const byId = (id) => document.getElementById(id);
@@ -75,7 +76,7 @@ function connect() {
   source.addEventListener("request", (message) => {
     prependCapped(state.incoming, JSON.parse(message.data), FEED_CAP + RIBBON_CAP);
     if (!state.frame) {
-      state.frame = requestAnimationFrame(flushIncoming);
+      state.frame = setTimeout(flushIncoming, FLUSH_INTERVAL_MS);
     }
   });
   source.addEventListener("error", () => {
@@ -93,7 +94,9 @@ function flushIncoming() {
   if (batch.length === 0) {
     return;
   }
-  state.lastId = batch[batch.length - 1].id;
+  const newestId = batch[batch.length - 1].id;
+  const arrived = newestId - state.lastId;
+  state.lastId = newestId;
 
   for (const event of batch) {
     addTick(event);
@@ -104,7 +107,7 @@ function flushIncoming() {
     for (const event of batch) {
       prependCapped(state.pending, event, FEED_CAP);
     }
-    state.pendingCount += batch.length;
+    state.pendingCount += arrived;
     renderBuffer();
     return;
   }

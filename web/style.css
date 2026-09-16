@@ -348,6 +348,14 @@ td {
   margin-bottom: 4px;
 }
 
+.rules table {
+  table-layout: fixed;
+}
+
+.rules th:nth-child(n + 3) {
+  width: 76px;
+}
+
 .rules th:first-child,
 .rules td:first-child {
   width: 46px;
@@ -383,7 +391,7 @@ td {
   border-radius: var(--radius-1);
   color: var(--text-2);
   font-size: 12px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .rules tr > :not(:first-child) {
@@ -605,7 +613,27 @@ td {
 
 @media (max-width: 720px) {
   .bar {
+    position: static;
     padding: 10px 16px;
+  }
+
+  .meta {
+    order: 1;
+    flex-basis: 100%;
+  }
+
+  .rules th,
+  .rules td {
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+
+  .rules th:nth-child(n + 3) {
+    width: 64px;
+  }
+
+  .actions {
+    order: 2;
   }
 
   .ribbon {
