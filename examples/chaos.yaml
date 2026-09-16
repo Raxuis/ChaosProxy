@@ -37,3 +37,12 @@ rules:
     match: GET /static/**
     bandwidth:
       bytes_per_second: 32768
+
+scenarios:
+  - name: payment-recovers
+    match: POST /api/payments
+    on_exhausted: passthrough
+    steps:
+      - status=503
+      - latency=2s; status=502
+      - off

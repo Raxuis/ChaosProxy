@@ -1,11 +1,13 @@
-package proxy
+package config_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/Raxuis/chaosproxy/internal/config"
 )
 
-func TestParseOverride(t *testing.T) {
+func TestParseFaults(t *testing.T) {
 	t.Parallel()
 
 	valid := map[string]string{
@@ -18,9 +20,9 @@ func TestParseOverride(t *testing.T) {
 		"off":                             "off",
 		"latency=0s; reset; bandwidth=64": "latency=0s; reset; bandwidth=64",
 	}
-	for header, want := range valid {
-		if _, applied, err := parseOverride(header); err != nil || applied != want {
-			t.Errorf("parseOverride(%q) = %q, %v; want %q", header, applied, err, want)
+	for value, want := range valid {
+		if _, canonical, err := config.ParseFaults(value); err != nil || canonical != want {
+			t.Errorf("ParseFaults(%q) = %q, %v; want %q", value, canonical, err, want)
 		}
 	}
 
@@ -43,9 +45,9 @@ func TestParseOverride(t *testing.T) {
 		"status=503; reset":       "use only one",
 		"hang; latency=1s; reset": "use only one",
 	}
-	for header, want := range invalid {
-		if _, _, err := parseOverride(header); err == nil || !strings.Contains(err.Error(), want) {
-			t.Errorf("parseOverride(%q) error = %v, want error containing %q", header, err, want)
+	for value, want := range invalid {
+		if _, _, err := config.ParseFaults(value); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("ParseFaults(%q) error = %v, want error containing %q", value, err, want)
 		}
 	}
 }

@@ -19,6 +19,10 @@ type runtimeConfig struct {
 	cors      corsPolicy
 	match     *rules.Matcher
 	chains    map[string][]faults.Fault
+
+	scenarioMatch *rules.Matcher
+	scenarios     map[string]*compiledScenario
+	scenarioOrder []*compiledScenario
 }
 
 func compileRuntime(base *config.Config, overrides map[string]bool) (*runtimeConfig, error) {
@@ -49,14 +53,35 @@ func compileRuntime(base *config.Config, overrides map[string]bool) (*runtimeCon
 	for _, rule := range cfg.Rules {
 		chains[rule.Name] = faults.Build(rule)
 	}
+
+	scenarioRules := make([]config.Rule, len(cfg.Scenarios))
+	scenarios := make(map[string]*compiledScenario, len(cfg.Scenarios))
+	scenarioOrder := make([]*compiledScenario, 0, len(cfg.Scenarios))
+	for index, scenario := range cfg.Scenarios {
+		compiled, err := compileScenario(scenario)
+		if err != nil {
+			return nil, fmt.Errorf("compile scenarios: %w", err)
+		}
+		scenarioRules[index] = config.Rule{Name: scenario.Name, Match: scenario.Match, Enabled: scenario.Enabled}
+		scenarios[scenario.Name] = compiled
+		scenarioOrder = append(scenarioOrder, compiled)
+	}
+	scenarioMatch, err := rules.Compile(scenarioRules)
+	if err != nil {
+		return nil, fmt.Errorf("compile scenarios: %w", err)
+	}
+
 	return &runtimeConfig{
-		base:      base,
-		overrides: overrides,
-		effective: cfg,
-		target:    target,
-		seed:      cfg.Seed,
-		cors:      newCORSPolicy(cfg.CORS, cfg.CORSOrigins),
-		match:     matcher,
-		chains:    chains,
+		base:          base,
+		overrides:     overrides,
+		effective:     cfg,
+		target:        target,
+		seed:          cfg.Seed,
+		cors:          newCORSPolicy(cfg.CORS, cfg.CORSOrigins),
+		match:         matcher,
+		chains:        chains,
+		scenarioMatch: scenarioMatch,
+		scenarios:     scenarios,
+		scenarioOrder: scenarioOrder,
 	}, nil
 }

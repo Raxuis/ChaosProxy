@@ -16,6 +16,14 @@ func (c *Config) Clone() *Config {
 	for index, rule := range c.Rules {
 		cloned.Rules[index] = cloneRule(rule)
 	}
+	if c.Scenarios != nil {
+		cloned.Scenarios = make([]Scenario, len(c.Scenarios))
+		for index, scenario := range c.Scenarios {
+			scenario.Steps = slices.Clone(scenario.Steps)
+			scenario.source = cloneSource(scenario.source)
+			cloned.Scenarios[index] = scenario
+		}
+	}
 	return &cloned
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/Raxuis/chaosproxy/internal/config"
 	"github.com/Raxuis/chaosproxy/internal/events"
 	"github.com/Raxuis/chaosproxy/internal/loopback"
+	"github.com/Raxuis/chaosproxy/internal/proxy"
 )
 
 const heartbeatInterval = 15 * time.Second
@@ -19,6 +20,8 @@ const heartbeatInterval = 15 * time.Second
 type Runtime interface {
 	CurrentConfig() *config.Config
 	SetRuleEnabled(name string, enabled bool) error
+	Scenarios() []proxy.ScenarioState
+	ResetScenario(name string) error
 	Reset()
 }
 
@@ -89,6 +92,8 @@ func (h *Handler) routes() {
 	h.mux.HandleFunc("GET /api/config", h.getConfig)
 	h.mux.HandleFunc("PUT /api/rules/{name}", h.setRuleEnabled)
 	h.mux.HandleFunc("POST /api/reset", h.reset)
+	h.mux.HandleFunc("GET /api/scenarios", h.getScenarios)
+	h.mux.HandleFunc("POST /api/scenarios/{name}/reset", h.resetScenario)
 }
 
 func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {

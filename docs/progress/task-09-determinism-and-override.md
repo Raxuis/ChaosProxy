@@ -1,7 +1,7 @@
 # Task 09 — Determinism and header override
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-16
+- Status: `completed`
+- Approval: granted on 2026-09-16
 - Depends on: task 08
 
 ## Goal
@@ -16,7 +16,7 @@ Make sequential runs replayable and add an explicitly enabled one-request overri
 - [x] Strictly parse opt-in `X-Chaos` overrides and return clear 400 errors.
 - [x] Return `X-Chaos-Applied` for assertions.
 - [x] Test identical-seed decisions and enabled/disabled override behavior.
-- [ ] Run `go test ./...` and receive explicit user approval.
+- [x] Run `go test ./...` and receive explicit user approval.
 
 ## Acceptance evidence
 
@@ -49,3 +49,4 @@ Make sequential runs replayable and add an explicitly enabled one-request overri
 |---|---|
 | 2026-09-15 | Per-rule RNG derivation and documentation completed during review R1. |
 | 2026-09-16 | Seed generation and X-Chaos header overrides implemented and verified; approval requested. |
+| 2026-09-16 | User approved task 09. |

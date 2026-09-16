@@ -22,14 +22,15 @@ import (
 // Handler applies a request-captured runtime configuration without locking the
 // data-plane path.
 type Handler struct {
-	current         atomic.Pointer[runtimeConfig]
-	ruleCounters    sync.Map
-	proxy           *httputil.ReverseProxy
-	logger          *log.Logger
-	publisher       EventPublisher
-	headerOverrides bool
-	stopping        context.Context
-	stop            context.CancelFunc
+	current          atomic.Pointer[runtimeConfig]
+	ruleCounters     sync.Map
+	scenarioCounters sync.Map
+	proxy            *httputil.ReverseProxy
+	logger           *log.Logger
+	publisher        EventPublisher
+	headerOverrides  bool
+	stopping         context.Context
+	stop             context.CancelFunc
 }
 
 var errShuttingDown = errors.New("proxy shutting down")
@@ -274,14 +275,6 @@ func stateFromRequest(r *http.Request) *requestState {
 func (m *requestMetrics) record(injection faults.Injection) {
 	m.faults = append(m.faults, injection.Fault)
 	m.injectedLatency += injection.Latency
-}
-
-func (h *Handler) nextRuleIndex(rule string) uint64 {
-	counter, found := h.ruleCounters.Load(rule)
-	if !found {
-		counter, _ = h.ruleCounters.LoadOrStore(rule, new(atomic.Uint64))
-	}
-	return counter.(*atomic.Uint64).Add(1) - 1
 }
 
 func deriveSeed(seed int64, rule string, index uint64) uint64 {

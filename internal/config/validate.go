@@ -28,7 +28,46 @@ func (c *Config) Validate() error {
 	validateCORS(c, addIssue)
 	validateCORSOrigins(c, addIssue)
 	validateRules(c, addIssue)
+	validateScenarios(c, addIssue)
 	return errors.Join(issues...)
+}
+
+func validateScenarios(cfg *Config, addIssue func(int, string, string)) {
+	used := make(map[string]bool, len(cfg.Rules)+len(cfg.Scenarios))
+	for _, rule := range cfg.Rules {
+		used[rule.Name] = true
+	}
+
+	for index := range cfg.Scenarios {
+		scenario := &cfg.Scenarios[index]
+		prefix := fmt.Sprintf("scenarios[%d]", index)
+
+		switch {
+		case scenario.Name == "":
+			addIssue(scenario.source.lineFor("name"), prefix+".name", "must not be empty")
+		case used[scenario.Name]:
+			addIssue(scenario.source.lineFor("name"), prefix+".name", fmt.Sprintf("must be unique across rules and scenarios; %q is already used", scenario.Name))
+		}
+		used[scenario.Name] = true
+
+		if strings.TrimSpace(scenario.Match) == "" {
+			addIssue(scenario.source.lineFor("match"), prefix+".match", "must not be empty")
+		}
+		switch scenario.OnExhausted {
+		case ExhaustPassthrough, ExhaustRepeat, ExhaustLast:
+		default:
+			addIssue(scenario.source.lineFor("on_exhausted"), prefix+".on_exhausted", "must be passthrough, repeat, or last")
+		}
+		if len(scenario.Steps) == 0 {
+			addIssue(scenario.source.lineFor("steps"), prefix+".steps", "must contain at least one step")
+		}
+		for stepIndex, step := range scenario.Steps {
+			if _, _, err := ParseFaults(step); err != nil {
+				field := fmt.Sprintf("steps[%d]", stepIndex)
+				addIssue(scenario.source.lineFor(field), prefix+"."+field, "is invalid: "+err.Error())
+			}
+		}
+	}
 }
 
 func validateCORSOrigins(cfg *Config, addIssue func(int, string, string)) {

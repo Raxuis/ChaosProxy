@@ -154,12 +154,13 @@ func (w *Watcher) reload() {
 	summary := summarizeChanges(w.active, candidate)
 	w.active = candidate
 	w.logger.Printf(
-		"config reloaded: rules_added=%v rules_removed=%v rules_modified=%v target_changed=%t seed_changed=%t cors_changed=%t",
+		"config reloaded: rules_added=%v rules_removed=%v rules_modified=%v target_changed=%t seed_changed=%t cors_changed=%t scenarios_changed=%t",
 		summary.added,
 		summary.removed,
 		summary.modified,
 		summary.targetChanged,
 		summary.seedChanged,
 		summary.corsChanged,
+		summary.scenariosChanged,
 	)
 }

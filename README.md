@@ -69,6 +69,8 @@ GET  /api/events
 GET  /api/config
 PUT  /api/rules/{name}  body: {"enabled": false}
 POST /api/reset
+GET  /api/scenarios
+POST /api/scenarios/{name}/reset
 ```
 
 Open `http://localhost:7071/` for the dashboard. It shows the target and seed,
@@ -123,6 +125,37 @@ requests to the same rule can still arrive in a different order between runs.
 
 Without `seed` in the file or `--seed`, Chaos Proxy generates a random seed and
 logs it at startup. Pass it back with `--seed` to replay the run.
+
+## Scenarios
+
+A scenario plays one step per matching request, in order, which makes CI runs
+exact: the first checkout fails, the second is slow, the third succeeds.
+
+```yaml
+scenarios:
+  - name: checkout-recovers
+    match: POST /api/checkout
+    on_exhausted: passthrough
+    steps:
+      - status=503
+      - latency=2s; status=502
+      - off
+```
+
+Steps use the same directives as the `X-Chaos` header below. `on_exhausted`
+decides what happens after the last step: `passthrough` (default) forwards
+requests without faults, `repeat` starts again from the first step, and `last`
+keeps replaying the final step.
+
+An enabled scenario takes precedence over rules for the requests it matches, and
+an `X-Chaos` header takes precedence over both. Steps advance in the order
+requests arrive, so run requests to the same scenario sequentially when the
+order matters.
+
+`GET /api/scenarios` reports each scenario's steps, how many requests it served,
+the next step, and whether it is exhausted. `POST /api/scenarios/{name}/reset`
+restarts one scenario, `POST /api/reset` restarts all of them, and a scenario
+whose definition changes on reload starts over.
 
 ## Header overrides
 

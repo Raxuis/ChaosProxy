@@ -14,11 +14,32 @@ const (
 
 // Config is the complete file-backed configuration.
 type Config struct {
-	Target      string   `json:"target" yaml:"target"`
-	Seed        int64    `json:"seed" yaml:"seed"`
-	CORS        CORSMode `json:"cors" yaml:"cors"`
-	CORSOrigins []string `json:"cors_origins,omitempty" yaml:"cors_origins,omitempty"`
-	Rules       []Rule   `json:"rules" yaml:"rules"`
+	Target      string     `json:"target" yaml:"target"`
+	Seed        int64      `json:"seed" yaml:"seed"`
+	CORS        CORSMode   `json:"cors" yaml:"cors"`
+	CORSOrigins []string   `json:"cors_origins,omitempty" yaml:"cors_origins,omitempty"`
+	Rules       []Rule     `json:"rules" yaml:"rules"`
+	Scenarios   []Scenario `json:"scenarios,omitempty" yaml:"scenarios,omitempty"`
+
+	source sourceLocation
+}
+
+// ExhaustMode chooses what a scenario does after its last step.
+type ExhaustMode string
+
+const (
+	ExhaustPassthrough ExhaustMode = "passthrough"
+	ExhaustRepeat      ExhaustMode = "repeat"
+	ExhaustLast        ExhaustMode = "last"
+)
+
+// Scenario plays one fault step per matching request, before rules apply.
+type Scenario struct {
+	Name        string      `json:"name" yaml:"name"`
+	Match       string      `json:"match" yaml:"match"`
+	Enabled     bool        `json:"enabled" yaml:"enabled"`
+	OnExhausted ExhaustMode `json:"on_exhausted" yaml:"on_exhausted"`
+	Steps       []string    `json:"steps" yaml:"steps"`
 
 	source sourceLocation
 }
@@ -76,11 +97,20 @@ type BandwidthConfig struct {
 }
 
 type rawConfig struct {
-	Target      string    `yaml:"target"`
-	Seed        int64     `yaml:"seed"`
-	CORS        CORSMode  `yaml:"cors"`
-	CORSOrigins []string  `yaml:"cors_origins"`
-	Rules       []rawRule `yaml:"rules"`
+	Target      string        `yaml:"target"`
+	Seed        int64         `yaml:"seed"`
+	CORS        CORSMode      `yaml:"cors"`
+	CORSOrigins []string      `yaml:"cors_origins"`
+	Rules       []rawRule     `yaml:"rules"`
+	Scenarios   []rawScenario `yaml:"scenarios"`
+}
+
+type rawScenario struct {
+	Name        string      `yaml:"name"`
+	Match       string      `yaml:"match"`
+	Enabled     *bool       `yaml:"enabled"`
+	OnExhausted ExhaustMode `yaml:"on_exhausted"`
+	Steps       []string    `yaml:"steps"`
 }
 
 type rawRule struct {

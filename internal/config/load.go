@@ -85,6 +85,20 @@ func decode(contents []byte) (*Config, error) {
 		}
 	}
 
+	for _, rawScenario := range raw.Scenarios {
+		scenario := Scenario{
+			Name:        rawScenario.Name,
+			Match:       rawScenario.Match,
+			Enabled:     rawScenario.Enabled == nil || *rawScenario.Enabled,
+			OnExhausted: rawScenario.OnExhausted,
+			Steps:       rawScenario.Steps,
+		}
+		if scenario.OnExhausted == "" {
+			scenario.OnExhausted = ExhaustPassthrough
+		}
+		cfg.Scenarios = append(cfg.Scenarios, scenario)
+	}
+
 	attachSourceLocations(cfg, &document)
 	return cfg, nil
 }
@@ -95,24 +109,29 @@ func attachSourceLocations(cfg *Config, document *yaml.Node) {
 	}
 
 	root := document.Content[0]
-	cfg.source = sourceLocation{
-		line:   root.Line,
-		fields: collectFieldLines(root, ""),
+	cfg.source = locate(root)
+	for index, node := range sequenceItems(root, "rules") {
+		if index < len(cfg.Rules) {
+			cfg.Rules[index].source = locate(node)
+		}
 	}
+	for index, node := range sequenceItems(root, "scenarios") {
+		if index < len(cfg.Scenarios) {
+			cfg.Scenarios[index].source = locate(node)
+		}
+	}
+}
 
-	rulesNode := mappingValue(root, "rules")
-	if rulesNode == nil || rulesNode.Kind != yaml.SequenceNode {
-		return
+func locate(node *yaml.Node) sourceLocation {
+	return sourceLocation{line: node.Line, fields: collectFieldLines(node, "")}
+}
+
+func sequenceItems(root *yaml.Node, key string) []*yaml.Node {
+	node := mappingValue(root, key)
+	if node == nil || node.Kind != yaml.SequenceNode {
+		return nil
 	}
-	for index, ruleNode := range rulesNode.Content {
-		if index >= len(cfg.Rules) {
-			break
-		}
-		cfg.Rules[index].source = sourceLocation{
-			line:   ruleNode.Line,
-			fields: collectFieldLines(ruleNode, ""),
-		}
-	}
+	return node.Content
 }
 
 func collectFieldLines(node *yaml.Node, prefix string) map[string]int {
@@ -129,6 +148,11 @@ func collectFieldLines(node *yaml.Node, prefix string) map[string]int {
 			path = prefix + "." + path
 		}
 		lines[path] = value.Line
+		if value.Kind == yaml.SequenceNode {
+			for itemIndex, item := range value.Content {
+				lines[fmt.Sprintf("%s[%d]", path, itemIndex)] = item.Line
+			}
+		}
 		for nestedPath, line := range collectFieldLines(value, path) {
 			lines[nestedPath] = line
 		}

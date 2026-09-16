@@ -6,19 +6,21 @@ import (
 )
 
 type changeSummary struct {
-	added         []string
-	removed       []string
-	modified      []string
-	targetChanged bool
-	seedChanged   bool
-	corsChanged   bool
+	added            []string
+	removed          []string
+	modified         []string
+	targetChanged    bool
+	seedChanged      bool
+	corsChanged      bool
+	scenariosChanged bool
 }
 
 func summarizeChanges(previous, next *Config) changeSummary {
 	summary := changeSummary{
-		targetChanged: previous.Target != next.Target,
-		seedChanged:   previous.Seed != next.Seed,
-		corsChanged:   previous.CORS != next.CORS || !slices.Equal(previous.CORSOrigins, next.CORSOrigins),
+		targetChanged:    previous.Target != next.Target,
+		seedChanged:      previous.Seed != next.Seed,
+		corsChanged:      previous.CORS != next.CORS || !slices.Equal(previous.CORSOrigins, next.CORSOrigins),
+		scenariosChanged: !slices.EqualFunc(previous.Scenarios, next.Scenarios, sameScenario),
 	}
 
 	previousRules := make(map[string]Rule, len(previous.Rules))
@@ -47,6 +49,12 @@ func summarizeChanges(previous, next *Config) changeSummary {
 		}
 	}
 	return summary
+}
+
+func sameScenario(left, right Scenario) bool {
+	left.source = sourceLocation{}
+	right.source = sourceLocation{}
+	return reflect.DeepEqual(left, right)
 }
 
 func sameRule(left, right Rule) bool {

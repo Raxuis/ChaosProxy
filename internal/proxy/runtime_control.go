@@ -20,6 +20,7 @@ func (h *Handler) Update(base *config.Config) error {
 			return err
 		}
 		if h.current.CompareAndSwap(current, next) {
+			h.restartChangedScenarios(current, next)
 			return nil
 		}
 	}
@@ -57,9 +58,10 @@ func (h *Handler) SetRuleEnabled(name string, enabled bool) error {
 	}
 }
 
-// Reset restarts every rule's deterministic decision sequence.
+// Reset restarts every rule decision sequence and every scenario.
 func (h *Handler) Reset() {
 	h.ruleCounters.Clear()
+	h.scenarioCounters.Clear()
 }
 
 // A toggle is dropped once the file changes that rule's enabled value, so the
