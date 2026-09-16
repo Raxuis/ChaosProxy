@@ -22,6 +22,7 @@ func (h *Handler) finishRequest(
 		Path:              r.URL.RequestURI(),
 		Rule:              metrics.rule,
 		Faults:            append([]string(nil), metrics.faults...),
+		Details:           append([]string(nil), metrics.details...),
 		InjectedLatencyMs: metrics.injectedLatency.Milliseconds(),
 		UpstreamLatencyMs: metrics.upstreamLatency.Milliseconds(),
 		Status:            writer.status,

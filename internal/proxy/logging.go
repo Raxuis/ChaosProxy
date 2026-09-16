@@ -10,6 +10,7 @@ import (
 type requestMetrics struct {
 	rule            string
 	faults          []string
+	details         []string
 	injectedLatency time.Duration
 	upstreamStarted time.Time
 	upstreamLatency time.Duration
@@ -55,7 +56,7 @@ func logRequest(
 ) {
 	faultNames := strings.Join(metrics.faults, ",")
 	logger.Printf(
-		"method=%s path=%q rule=%q faults=%q injected_latency_ms=%d upstream_latency_ms=%d upstream_status=%d status=%d bytes=%d duration=%s error=%q",
+		"method=%s path=%q rule=%q faults=%q injected_latency_ms=%d upstream_latency_ms=%d upstream_status=%d status=%d bytes=%d duration=%s details=%q error=%q",
 		r.Method,
 		r.URL.RequestURI(),
 		metrics.rule,
@@ -66,6 +67,7 @@ func logRequest(
 		writer.status,
 		writer.bytes,
 		time.Since(started).Round(time.Microsecond),
+		strings.Join(metrics.details, "; "),
 		requestError(metrics),
 	)
 }

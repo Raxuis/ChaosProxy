@@ -59,6 +59,7 @@ func NewBus() *Bus {
 // oldest queued event instead of delaying the publisher.
 func (b *Bus) Publish(event Event) {
 	event.Faults = append([]string(nil), event.Faults...)
+	event.Details = append([]string(nil), event.Details...)
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -224,5 +225,6 @@ func drain(events chan Event) {
 
 func cloneEvent(event Event) Event {
 	event.Faults = append([]string(nil), event.Faults...)
+	event.Details = append([]string(nil), event.Details...)
 	return event
 }

@@ -1,8 +1,10 @@
-A HTTP-aware chaos proxy for frontend developers — configure latency, errors, truncation and payload mutations per route, in code, reproducibly, in CI.
+A HTTP-aware chaos proxy for frontend developers — configure latency, errors, truncation and payload mutations per
+route, in code, reproducibly, in CI.
 
 # Chaos Proxy
 
-Chaos Proxy will sit between a frontend application and its real HTTP API, injecting reproducible failures on a per-route basis.
+Chaos Proxy will sit between a frontend application and its real HTTP API, injecting reproducible failures on a
+per-route basis.
 
 ## Project status
 
@@ -94,6 +96,46 @@ compute the cut, and longer ones are cut at `at` of that first MiB. Avoid
 truncate rules on endless streams such as Server-Sent Events: nothing is sent
 until 1 MiB has arrived.
 
+## JSON mutation
+
+`mutate` rewrites JSON responses so the frontend meets missing, empty, oversized,
+or unexpected fields:
+
+```yaml
+rules:
+  - name: broken-profile
+    match: GET /api/account
+    mutate:
+      probability: 0.5
+      max_bytes: 1048576
+      operations:
+        - op: nullify
+          path: user.email
+        - op: stretch
+          path: user.name
+          factor: 20
+        - op: drop
+          path: items.*.price
+```
+
+| Operation | Effect                                                                  |
+|-----------|-------------------------------------------------------------------------|
+| `nullify` | set the value to `null`                                                 |
+| `empty`   | replace it with `""`, `[]`, `{}`, `0`, or `false` depending on its type |
+| `inflate` | repeat the items of an array `factor` times (default 10)                |
+| `stretch` | repeat a string `factor` times (default 10)                             |
+| `drop`    | remove the key or array element                                         |
+
+Paths are dotted, use numbers for array indexes, and `*` for every element or
+key: `items.0.price`, `items.*.price`. Keys containing dots cannot be addressed.
+
+Only `application/json` and `*+json` responses up to `max_bytes` (1 MiB by
+default) are mutated. Compressed and oversized bodies pass through unchanged, and
+operations whose path matches nothing leave the body intact. Both cases are
+explained in the access log `details` field and in dashboard events. After a
+mutation the proxy rewrites `Content-Length` and removes `ETag`. Mutated bodies
+keep numbers exact but list object keys in alphabetical order.
+
 ## Connection resets and bandwidth
 
 `reset` closes the client connection with a TCP RST before any response, so
@@ -167,15 +209,15 @@ GET /api/orders
 X-Chaos: latency=800ms; status=503
 ```
 
-| Directive | Effect |
-|---|---|
-| `latency=800ms` | wait before handling the request |
-| `status=503` | respond with this status without calling the upstream |
-| `hang` | never respond |
-| `reset` | reset the TCP connection |
-| `truncate=0.5` | cut the response body at this fraction |
-| `bandwidth=32768` | deliver the body at this many bytes per second |
-| `off` | forward the request without any fault |
+| Directive         | Effect                                                |
+|-------------------|-------------------------------------------------------|
+| `latency=800ms`   | wait before handling the request                      |
+| `status=503`      | respond with this status without calling the upstream |
+| `hang`            | never respond                                         |
+| `reset`           | reset the TCP connection                              |
+| `truncate=0.5`    | cut the response body at this fraction                |
+| `bandwidth=32768` | deliver the body at this many bytes per second        |
+| `off`             | forward the request without any fault                 |
 
 The header replaces rule matching for that request, never shifts rule decision
 sequences, and is removed before the request reaches the upstream. `status`,

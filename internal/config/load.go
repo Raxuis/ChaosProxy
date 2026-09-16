@@ -10,6 +10,11 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+const (
+	defaultMutateMaxBytes = 1 << 20
+	defaultMutateFactor   = 10
+)
+
 // Load parses one YAML document from path. Semantic validation is deliberately
 // separate so hot reload callers can distinguish syntax and validation errors.
 func Load(path string) (*Config, error) {
@@ -82,7 +87,9 @@ func decode(contents []byte) (*Config, error) {
 			Truncate:  rawRule.Truncate,
 			Reset:     rawRule.Reset,
 			Bandwidth: rawRule.Bandwidth,
+			Mutate:    rawRule.Mutate,
 		}
+		applyMutateDefaults(rawRule.Mutate)
 	}
 
 	for _, rawScenario := range raw.Scenarios {
@@ -101,6 +108,21 @@ func decode(contents []byte) (*Config, error) {
 
 	attachSourceLocations(cfg, &document)
 	return cfg, nil
+}
+
+func applyMutateDefaults(mutate *MutateConfig) {
+	if mutate == nil {
+		return
+	}
+	if mutate.MaxBytes == 0 {
+		mutate.MaxBytes = defaultMutateMaxBytes
+	}
+	for index := range mutate.Operations {
+		operation := &mutate.Operations[index]
+		if operation.Factor == 0 && (operation.Op == "inflate" || operation.Op == "stretch") {
+			operation.Factor = defaultMutateFactor
+		}
+	}
 }
 
 func attachSourceLocations(cfg *Config, document *yaml.Node) {

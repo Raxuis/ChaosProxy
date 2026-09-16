@@ -1,6 +1,9 @@
 package faults
 
-import "math/rand/v2"
+import (
+	"fmt"
+	"math/rand/v2"
+)
 
 func shouldTrigger(rng *rand.Rand, probability float64) bool {
 	switch {
@@ -17,4 +20,8 @@ func emit(ctx *Context, injection Injection) {
 	if ctx.Emit != nil {
 		ctx.Emit(injection)
 	}
+}
+
+func note(ctx *Context, format string, args ...any) {
+	emit(ctx, Injection{Detail: fmt.Sprintf(format, args...)})
 }

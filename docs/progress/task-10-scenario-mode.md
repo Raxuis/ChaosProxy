@@ -1,7 +1,7 @@
 # Task 10 — Scenario mode
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-16
+- Status: `completed`
+- Approval: granted on 2026-09-16
 - Depends on: task 09
 
 ## Goal
@@ -16,7 +16,7 @@ Add deterministic scripted fault sequences evaluated before probabilistic rules.
 - [x] Reset counters through the control plane.
 - [x] Expose scenario state for test assertions.
 - [x] Test exact sequences, exhaustion modes, and reset behavior.
-- [ ] Run `go test ./...` and receive explicit user approval.
+- [x] Run `go test ./...` and receive explicit user approval.
 
 ## Acceptance evidence
 
@@ -42,3 +42,4 @@ Add deterministic scripted fault sequences evaluated before probabilistic rules.
 | Date | Note |
 |---|---|
 | 2026-09-16 | Scenario mode implemented and verified; approval requested. |
+| 2026-09-16 | User approved task 10. |

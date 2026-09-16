@@ -55,8 +55,23 @@ type Rule struct {
 	Truncate  *TruncateConfig  `json:"truncate,omitempty" yaml:"truncate,omitempty"`
 	Reset     *ResetConfig     `json:"reset,omitempty" yaml:"reset,omitempty"`
 	Bandwidth *BandwidthConfig `json:"bandwidth,omitempty" yaml:"bandwidth,omitempty"`
+	Mutate    *MutateConfig    `json:"mutate,omitempty" yaml:"mutate,omitempty"`
 
 	source sourceLocation
+}
+
+// MutateConfig rewrites JSON response bodies that fit within MaxBytes.
+type MutateConfig struct {
+	Probability float64          `json:"probability" yaml:"probability"`
+	MaxBytes    int64            `json:"max_bytes" yaml:"max_bytes"`
+	Operations  []MutationConfig `json:"operations" yaml:"operations"`
+}
+
+// MutationConfig applies one operation to every value a dotted path selects.
+type MutationConfig struct {
+	Op     string `json:"op" yaml:"op"`
+	Path   string `json:"path" yaml:"path"`
+	Factor int    `json:"factor,omitempty" yaml:"factor,omitempty"`
 }
 
 // LatencyConfig configures a fixed or lognormal delay.
@@ -123,6 +138,7 @@ type rawRule struct {
 	Truncate  *TruncateConfig  `yaml:"truncate"`
 	Reset     *ResetConfig     `yaml:"reset"`
 	Bandwidth *BandwidthConfig `yaml:"bandwidth"`
+	Mutate    *MutateConfig    `yaml:"mutate"`
 }
 
 type sourceLocation struct {

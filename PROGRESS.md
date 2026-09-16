@@ -28,8 +28,8 @@ Every task follows this state machine:
 | 07 | 2 | Embedded web UI | `completed` | [task-07-web-ui.md](docs/progress/task-07-web-ui.md) |
 | 08 | 2 | TCP reset and bandwidth faults | `completed` | [task-08-reset-and-bandwidth.md](docs/progress/task-08-reset-and-bandwidth.md) |
 | 09 | 3 | Determinism and header override | `completed` | [task-09-determinism-and-override.md](docs/progress/task-09-determinism-and-override.md) |
-| 10 | 3 | Scenario mode | `awaiting_validation` | [task-10-scenario-mode.md](docs/progress/task-10-scenario-mode.md) |
-| 11 | 3 | JSON payload mutation | `pending` | [task-11-payload-mutation.md](docs/progress/task-11-payload-mutation.md) |
+| 10 | 3 | Scenario mode | `completed` | [task-10-scenario-mode.md](docs/progress/task-10-scenario-mode.md) |
+| 11 | 3 | JSON payload mutation | `awaiting_validation` | [task-11-payload-mutation.md](docs/progress/task-11-payload-mutation.md) |
 | 12 | 3 | CI integrations and reports | `pending` | [task-12-ci-integrations.md](docs/progress/task-12-ci-integrations.md) |
 | 13 | 4 | Packaging and distribution | `pending` | [task-13-packaging.md](docs/progress/task-13-packaging.md) |
 | 14 | 4 | Final README | `pending` | [task-14-final-readme.md](docs/progress/task-14-final-readme.md) |

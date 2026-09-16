@@ -76,4 +76,8 @@ test("ruleFaults describes every configured fault", () => {
     ruleFaults({ reset: { probability: 0.2 }, bandwidth: { bytes_per_second: 32768 } }),
     ["reset · 20%", "bandwidth 32 KB/s"],
   );
+  assert.deepEqual(
+    ruleFaults({ mutate: { probability: 0.5, operations: [{ op: "nullify", path: "user.email" }, { op: "drop", path: "id" }] } }),
+    ["mutate 2 ops · 50%"],
+  );
 });

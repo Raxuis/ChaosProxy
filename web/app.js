@@ -404,6 +404,9 @@ function buildRow(event) {
   for (const fault of event.faults ?? []) {
     faults.append(textElement("span", "badge", fault));
   }
+  if (event.details?.length) {
+    faults.title = event.details.join("\n");
+  }
 
   const latency = textElement("td", "latency num", "");
   if (event.injected_latency_ms > 0) {

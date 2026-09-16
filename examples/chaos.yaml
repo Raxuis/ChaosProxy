@@ -28,6 +28,17 @@ rules:
       probability: 0.1
       at: 0.5
 
+  - name: broken-profile
+    match: GET /api/account
+    mutate:
+      probability: 0.5
+      operations:
+        - op: nullify
+          path: user.email
+        - op: stretch
+          path: user.name
+          factor: 20
+
   - name: reset-checkout
     match: POST /api/checkout
     reset:

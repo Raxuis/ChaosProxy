@@ -17,6 +17,9 @@ func Build(rule config.Rule) []Fault {
 	if rule.Hang != nil {
 		chain = append(chain, newHangFault(*rule.Hang))
 	}
+	if rule.Mutate != nil {
+		chain = append(chain, newMutateFault(*rule.Mutate))
+	}
 	if rule.Truncate != nil {
 		chain = append(chain, newTruncateFault(*rule.Truncate))
 	}

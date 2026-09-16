@@ -11,6 +11,7 @@ type Event struct {
 	Path              string    `json:"path"`
 	Rule              string    `json:"rule,omitempty"`
 	Faults            []string  `json:"faults,omitempty"`
+	Details           []string  `json:"details,omitempty"`
 	InjectedLatencyMs int64     `json:"injected_latency_ms"`
 	UpstreamLatencyMs int64     `json:"upstream_latency_ms"`
 	Status            int       `json:"status"`

@@ -7,10 +7,11 @@ import (
 	"time"
 )
 
-// Injection describes one fault applied to a request.
+// Injection describes one fault applied to a request, or a note about why a fault did nothing.
 type Injection struct {
 	Fault   string
 	Latency time.Duration
+	Detail  string
 }
 
 // Fault can intercept a request before forwarding and transform its upstream

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 )
@@ -132,7 +133,7 @@ func validateRules(cfg *Config, addIssue func(int, string, string)) {
 			addIssue(rule.source.lineFor("match"), prefix+".match", "must not be empty")
 		}
 		if rule.Latency == nil && rule.Status == nil && rule.Hang == nil && rule.Truncate == nil &&
-			rule.Reset == nil && rule.Bandwidth == nil {
+			rule.Reset == nil && rule.Bandwidth == nil && rule.Mutate == nil {
 			addIssue(rule.source.line, prefix, "must configure at least one fault")
 		}
 
@@ -145,6 +146,41 @@ func validateRules(cfg *Config, addIssue func(int, string, string)) {
 		}
 		if rule.Bandwidth != nil && rule.Bandwidth.BytesPerSecond <= 0 {
 			addIssue(rule.source.lineFor("bandwidth.bytes_per_second"), prefix+".bandwidth.bytes_per_second", "must be greater than zero")
+		}
+		validateMutate(rule, prefix, addIssue)
+	}
+}
+
+func validateMutate(rule *Rule, prefix string, addIssue func(int, string, string)) {
+	mutate := rule.Mutate
+	if mutate == nil {
+		return
+	}
+
+	validateProbability(rule, prefix, "mutate.probability", mutate.Probability, addIssue)
+	if mutate.MaxBytes <= 0 {
+		addIssue(rule.source.lineFor("mutate.max_bytes"), prefix+".mutate.max_bytes", "must be greater than zero")
+	}
+	if len(mutate.Operations) == 0 {
+		addIssue(rule.source.lineFor("mutate.operations"), prefix+".mutate.operations", "must contain at least one operation")
+	}
+	for index, operation := range mutate.Operations {
+		field := fmt.Sprintf("mutate.operations[%d]", index)
+		line := rule.source.lineFor(field)
+		switch operation.Op {
+		case "nullify", "empty", "drop":
+			if operation.Factor != 0 {
+				addIssue(line, prefix+"."+field+".factor", "only applies to inflate and stretch")
+			}
+		case "inflate", "stretch":
+			if operation.Factor < 2 || operation.Factor > 1000 {
+				addIssue(line, prefix+"."+field+".factor", "must be between 2 and 1000")
+			}
+		default:
+			addIssue(line, prefix+"."+field+".op", "must be nullify, empty, inflate, stretch, or drop")
+		}
+		if operation.Path == "" || slices.Contains(strings.Split(operation.Path, "."), "") {
+			addIssue(line, prefix+"."+field+".path", "must be a dotted path such as user.email or items.*.price")
 		}
 	}
 }

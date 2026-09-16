@@ -54,6 +54,11 @@ func cloneRule(rule Rule) Rule {
 		value := *rule.Bandwidth
 		cloned.Bandwidth = &value
 	}
+	if rule.Mutate != nil {
+		value := *rule.Mutate
+		value.Operations = slices.Clone(rule.Mutate.Operations)
+		cloned.Mutate = &value
+	}
 	return cloned
 }
 

@@ -17,13 +17,14 @@ func TestBuildUsesDeterministicOrder(t *testing.T) {
 		Truncate:  &config.TruncateConfig{Probability: 0.5, At: 0.5},
 		Reset:     &config.ResetConfig{Probability: 0.5},
 		Bandwidth: &config.BandwidthConfig{BytesPerSecond: 1024},
+		Mutate:    &config.MutateConfig{Probability: 1, MaxBytes: 1024, Operations: []config.MutationConfig{{Op: "drop", Path: "id"}}},
 	})
 
 	names := make([]string, len(chain))
 	for index, fault := range chain {
 		names[index] = fault.Name()
 	}
-	if want := []string{"latency", "reset", "status", "hang", "truncate", "bandwidth"}; !reflect.DeepEqual(names, want) {
+	if want := []string{"latency", "reset", "status", "hang", "mutate", "truncate", "bandwidth"}; !reflect.DeepEqual(names, want) {
 		t.Fatalf("fault order = %v, want %v", names, want)
 	}
 }

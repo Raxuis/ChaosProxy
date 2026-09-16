@@ -273,7 +273,12 @@ func stateFromRequest(r *http.Request) *requestState {
 }
 
 func (m *requestMetrics) record(injection faults.Injection) {
-	m.faults = append(m.faults, injection.Fault)
+	if injection.Fault != "" {
+		m.faults = append(m.faults, injection.Fault)
+	}
+	if injection.Detail != "" {
+		m.details = append(m.details, injection.Detail)
+	}
 	m.injectedLatency += injection.Latency
 }
 
