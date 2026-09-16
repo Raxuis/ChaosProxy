@@ -392,6 +392,9 @@ function renderFeedEmpty() {
 
 function buildRow(event) {
   const row = document.createElement("tr");
+  if (event.error) {
+    row.title = event.error;
+  }
   const kind = statusClass(event.status);
   row.append(
     textElement("td", "time", formatTime(event.timestamp)),

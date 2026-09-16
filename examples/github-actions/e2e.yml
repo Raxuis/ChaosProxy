@@ -1,0 +1,70 @@
+name: End-to-end tests with Chaos Proxy
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      API_ORIGIN: http://127.0.0.1:9000
+      CHAOSPROXY_URL: http://127.0.0.1:7070
+      CHAOSPROXY_CONTROL_URL: http://127.0.0.1:7071
+      APP_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Chaos Proxy
+        run: go install github.com/Raxuis/chaosproxy/cmd/chaosproxy@latest
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Start the API and the application
+        run: |
+          npm run start:api > api.log 2>&1 &
+          npm run build
+          npm run start > app.log 2>&1 &
+          curl --silent --fail --retry 30 --retry-connrefused --retry-delay 1 "$APP_URL" > /dev/null
+
+      - name: Start Chaos Proxy
+        run: |
+          chaosproxy --config chaos.yaml --target "$API_ORIGIN" --seed 42 \
+            --report chaos-report.json --exit-on-error > chaosproxy.log 2>&1 &
+          echo "CHAOSPROXY_PID=$!" >> "$GITHUB_ENV"
+          curl --silent --fail --retry 30 --retry-connrefused --retry-delay 1 "$CHAOSPROXY_CONTROL_URL/healthz"
+
+      - name: Run end-to-end tests
+        run: npx playwright test
+
+      - name: Stop Chaos Proxy and write its report
+        if: always()
+        run: |
+          kill -INT "$CHAOSPROXY_PID" 2>/dev/null || true
+          while kill -0 "$CHAOSPROXY_PID" 2>/dev/null; do sleep 1; done
+
+      - name: Upload Chaos Proxy report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: chaosproxy
+          path: |
+            chaos-report.json
+            chaosproxy.log
+
+      - name: Fail when requests failed inside the proxy
+        run: jq --exit-status '.totals.errors == 0' chaos-report.json

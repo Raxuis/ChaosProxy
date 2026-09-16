@@ -1,6 +1,8 @@
 package proxy
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -70,6 +72,14 @@ func logRequest(
 		strings.Join(metrics.details, "; "),
 		requestError(metrics),
 	)
+}
+
+// Shutdown rejections and client cancellations are expected, so events do not report them.
+func eventError(metrics *requestMetrics) string {
+	if errors.Is(metrics.pipelineError, errShuttingDown) || errors.Is(metrics.proxyError, context.Canceled) {
+		return ""
+	}
+	return requestError(metrics)
 }
 
 func requestError(metrics *requestMetrics) string {

@@ -85,6 +85,21 @@ func TestParseOptionsHeaderOverrides(t *testing.T) {
 	}
 }
 
+func TestParseOptionsCIFlags(t *testing.T) {
+	t.Parallel()
+
+	opts, err := parseOptions([]string{"--target", "http://localhost", "--report", "report.json", "--max-requests", "25", "--exit-on-error"}, io.Discard)
+	if err != nil {
+		t.Fatalf("parseOptions() unexpected error: %v", err)
+	}
+	if opts.reportPath != "report.json" || opts.maxRequests != 25 || !opts.exitOnError {
+		t.Fatalf("options = %+v, want report, limit, and exit-on-error", opts)
+	}
+	if _, err := parseOptions([]string{"--target", "http://localhost", "--max-requests", "-1"}, io.Discard); err == nil || !strings.Contains(err.Error(), "--max-requests must not be negative") {
+		t.Fatalf("negative --max-requests error = %v", err)
+	}
+}
+
 func TestResolveConfigSeedSources(t *testing.T) {
 	t.Parallel()
 

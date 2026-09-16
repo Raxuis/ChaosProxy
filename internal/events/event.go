@@ -16,4 +16,6 @@ type Event struct {
 	UpstreamLatencyMs int64     `json:"upstream_latency_ms"`
 	Status            int       `json:"status"`
 	Bytes             int64     `json:"bytes"`
+	DurationMs        int64     `json:"duration_ms"`
+	Error             string    `json:"error,omitempty"`
 }

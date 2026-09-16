@@ -26,6 +26,9 @@ type options struct {
 	seed            optionalInt64
 	generatedSeed   int64
 	headerOverrides bool
+	reportPath      string
+	maxRequests     int
+	exitOnError     bool
 }
 
 type optionalInt64 struct {
@@ -62,6 +65,9 @@ func parseOptions(args []string, output io.Writer) (options, error) {
 	flags.IntVar(&opts.controlPort, "control-port", defaultControlPort, "control-plane listen port")
 	flags.Var(&opts.seed, "seed", "random seed (overrides config)")
 	flags.BoolVar(&opts.headerOverrides, "header-overrides", false, "let clients force faults with the X-Chaos request header")
+	flags.StringVar(&opts.reportPath, "report", "", "write a JSON run report to PATH on shutdown, or - for standard output")
+	flags.IntVar(&opts.maxRequests, "max-requests", 0, "shut down after this many data-plane requests (0 means no limit)")
+	flags.BoolVar(&opts.exitOnError, "exit-on-error", false, "shut down and exit with status 1 when a request fails inside the proxy")
 
 	if err := flags.Parse(args); err != nil {
 		return options{}, err
@@ -71,6 +77,9 @@ func parseOptions(args []string, output io.Writer) (options, error) {
 	}
 	if opts.configPath == "" && opts.target == "" {
 		return options{}, errors.New("either --config or --target is required")
+	}
+	if opts.maxRequests < 0 {
+		return options{}, errors.New("--max-requests must not be negative")
 	}
 	if opts.host == "" {
 		return options{}, errors.New("--host must not be empty")

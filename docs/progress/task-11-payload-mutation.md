@@ -1,7 +1,7 @@
 # Task 11 — JSON payload mutation
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-16
+- Status: `completed`
+- Approval: granted on 2026-09-16
 - Depends on: task 10
 
 ## Goal
@@ -17,7 +17,7 @@ Mutate bounded JSON payloads with nullify, empty, inflate, stretch, and drop ope
 - [x] Add table-driven operation, bound, and content-type tests.
 - [x] Run `go test ./...`.
 - [ ] Exercise the fault against a real frontend and record any bug found.
-- [ ] Receive explicit user approval.
+- [x] Receive explicit user approval.
 
 ## Acceptance evidence
 
@@ -47,3 +47,4 @@ Mutate bounded JSON payloads with nullify, empty, inflate, stretch, and drop ope
 | Date | Note |
 |---|---|
 | 2026-09-16 | JSON mutation implemented and verified against the binary; real-frontend check still open; approval requested. |
+| 2026-09-16 | User approved task 11; the real-frontend check stays open. |

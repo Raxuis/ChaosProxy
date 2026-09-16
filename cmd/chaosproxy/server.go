@@ -28,6 +28,7 @@ type serverOptions struct {
 	beginControlShutdown func()
 	watchConfig          func(context.Context) error
 	logger               *log.Logger
+	stop                 context.Context
 }
 
 type namedServer struct {
@@ -68,7 +69,11 @@ func run(options serverOptions) error {
 		servers[1].server.RegisterOnShutdown(options.beginControlShutdown)
 	}
 
-	applicationContext, cancelApplication := context.WithCancel(context.Background())
+	parent := options.stop
+	if parent == nil {
+		parent = context.Background()
+	}
+	applicationContext, cancelApplication := context.WithCancel(parent)
 	defer cancelApplication()
 	signalContext, stopSignals := signal.NotifyContext(
 		applicationContext,

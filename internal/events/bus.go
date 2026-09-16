@@ -1,8 +1,6 @@
 package events
 
 import (
-	"maps"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -38,19 +36,15 @@ type Bus struct {
 	historyNext int
 	historySize int
 	nextID      uint64
-	published   uint64
-	faulted     uint64
 	dropped     uint64
-	statuses    map[string]uint64
-	rules       map[string]*RuleStats
+	tally       *Tally
 	subscribers map[*Subscription]struct{}
 }
 
 // NewBus creates an empty event bus.
 func NewBus() *Bus {
 	return &Bus{
-		statuses:    make(map[string]uint64),
-		rules:       make(map[string]*RuleStats),
+		tally:       NewTally(),
 		subscribers: make(map[*Subscription]struct{}),
 	}
 }
@@ -69,8 +63,7 @@ func (b *Bus) Publish(event Event) {
 	}
 	b.nextID++
 	event.ID = b.nextID
-	b.published++
-	b.count(event)
+	b.tally.Add(event)
 	b.appendHistory(event)
 	for subscription := range b.subscribers {
 		b.publishTo(subscription, event)
@@ -96,18 +89,14 @@ func (b *Bus) Subscribe() *Subscription {
 func (b *Bus) Stats() Stats {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	rules := make(map[string]RuleStats, len(b.rules))
-	for name, rule := range b.rules {
-		rules[name] = RuleStats{Matched: rule.Matched, Faulted: rule.Faulted, Faults: maps.Clone(rule.Faults)}
-	}
 	return Stats{
-		Published:   b.published,
-		Faulted:     b.faulted,
+		Published:   b.tally.Requests(),
+		Faulted:     b.tally.Faulted(),
 		Dropped:     b.dropped,
 		Subscribers: len(b.subscribers),
 		History:     b.historySize,
-		Statuses:    maps.Clone(b.statuses),
-		Rules:       rules,
+		Statuses:    b.tally.Statuses(),
+		Rules:       b.tally.Rules(),
 	}
 }
 
@@ -120,46 +109,12 @@ func (b *Bus) Reset() {
 	b.historyNext = 0
 	b.historySize = 0
 	b.nextID = 0
-	b.published = 0
-	b.faulted = 0
 	b.dropped = 0
-	b.statuses = make(map[string]uint64)
-	b.rules = make(map[string]*RuleStats)
+	b.tally = NewTally()
 	for subscription := range b.subscribers {
 		drain(subscription.events)
 		subscription.dropped.Store(0)
 	}
-}
-
-func (b *Bus) count(event Event) {
-	b.statuses[statusClass(event.Status)]++
-	if len(event.Faults) > 0 {
-		b.faulted++
-	}
-	if event.Rule == "" {
-		return
-	}
-
-	rule, found := b.rules[event.Rule]
-	if !found {
-		rule = &RuleStats{Faults: make(map[string]uint64)}
-		b.rules[event.Rule] = rule
-	}
-	rule.Matched++
-	if len(event.Faults) > 0 {
-		rule.Faulted++
-	}
-	for _, fault := range event.Faults {
-		rule.Faults[fault]++
-	}
-}
-
-// Status 0 means the response never started, for example a hang the client abandoned.
-func statusClass(status int) string {
-	if status < 100 || status > 599 {
-		return "aborted"
-	}
-	return strconv.Itoa(status/100) + "xx"
 }
 
 func (b *Bus) appendHistory(event Event) {

@@ -27,5 +27,7 @@ func (h *Handler) finishRequest(
 		UpstreamLatencyMs: metrics.upstreamLatency.Milliseconds(),
 		Status:            writer.status,
 		Bytes:             writer.bytes,
+		DurationMs:        time.Since(started).Milliseconds(),
+		Error:             eventError(metrics),
 	})
 }

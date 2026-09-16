@@ -8,11 +8,11 @@ per-route basis.
 
 ## Project status
 
-Chaos Proxy is under active development and not released yet. It already
-supports route matching, latency, status, hang and truncation faults, hot
-reload, reproducible seeded decisions, browser-safe CORS handling, and a control
-plane with a live event stream. An embedded web UI, scenario mode and CI
-integrations are planned.
+Chaos Proxy is under active development and not released yet. It supports
+latency, status, hang, reset, truncation, bandwidth, and JSON mutation faults per
+route, scripted scenarios, `X-Chaos` header overrides, hot reload, reproducible
+seeds, an embedded dashboard, and JSON run reports for CI. Packaging and
+distribution come next.
 
 See [PROGRESS.md](PROGRESS.md) for the roadmap and the status of each task.
 
@@ -57,6 +57,9 @@ Available flags:
 --control-port PORT  control-plane listen port (default 7071)
 --seed N       random seed; overrides the YAML value
 --header-overrides  let clients force faults with the X-Chaos header
+--report PATH  write a JSON run report on shutdown (- for standard output)
+--max-requests N  shut down after N data-plane requests
+--exit-on-error  shut down and exit 1 when a request fails inside the proxy
 ```
 
 At least one of `--config` or `--target` is required.
@@ -247,6 +250,44 @@ cors_origins:
 ```
 
 `"*"` reflects every origin with credentials; keep it out of shared configurations.
+
+## CI integration
+
+`--report`, `--max-requests`, and `--exit-on-error` turn a proxy run into a CI
+check. Injected faults never count as errors: errors are failures of the proxy
+itself, such as an unreachable upstream or an invalid `X-Chaos` header.
+
+The report lists request totals and status classes, fault counts per rule,
+scenario progress, total, upstream, and injected latency percentiles, the first
+100 errors, and why the run stopped. An abridged example:
+
+```json
+{
+  "stopped_by": "max-requests",
+  "seed": 7,
+  "totals": { "requests": 12, "injected": 5, "errors": 0, "statuses": { "2xx": 7, "5xx": 5 } },
+  "rules": { "flaky-bundle": { "matched": 10, "faulted": 4, "faults": { "status": 4 } } },
+  "scenarios": [{ "name": "account-recovers", "served": 2, "exhausted": true }],
+  "latency_ms": { "total": { "p50": 0, "p90": 1, "p95": 4, "p99": 4, "max": 4 } },
+  "errors": []
+}
+```
+
+Ready-to-adapt integrations live in [`examples`](examples):
+
+- [`playwright/chaos.ts`](examples/playwright/chaos.ts) is a typed fixture that
+  resets the proxy before each test and exposes `scenario`, `resetScenario`,
+  `setRuleEnabled`, `stats`, and `forceFaults(page, "status=503")`. The last one
+  needs `--header-overrides`. Keep `workers: 1` so scenario steps stay in order.
+- [`playwright/checkout.spec.ts`](examples/playwright/checkout.spec.ts) tests a
+  payment retry that stays stable because the `payment-recovers` scenario fails
+  exactly twice.
+- [`nextjs`](examples/nextjs) routes browser `/api` calls and server-side `fetch`
+  through the proxy with `CHAOSPROXY_URL`. Header overrides only reach requests
+  the browser sends, not server-side fetches.
+- [`github-actions/e2e.yml`](examples/github-actions/e2e.yml) starts the proxy
+  with a fixed seed, runs Playwright, uploads the report, and fails the job when
+  requests failed inside the proxy.
 
 ## Contributing
 
