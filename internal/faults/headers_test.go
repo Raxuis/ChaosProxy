@@ -53,7 +53,7 @@ func TestHeadersAfterAppliesSetAndRemove(t *testing.T) {
 		t.Errorf("X-Preserved = %q, want stay", got)
 	}
 
-	wantInjections := []Injection{{Fault: "headers"}}
+	wantInjections := []Injection{{Fault: "headers", Detail: "set Cache-Control, set X-New-Header, removed Content-Type, removed X-Old-Header"}}
 	if !reflect.DeepEqual(injections, wantInjections) {
 		t.Fatalf("injections = %+v, want %+v", injections, wantInjections)
 	}

@@ -17,11 +17,11 @@ func Build(rule config.Rule) []Fault {
 	if rule.Hang != nil {
 		chain = append(chain, newHangFault(*rule.Hang))
 	}
-	if rule.Headers != nil {
-		chain = append(chain, newHeadersFault(*rule.Headers))
-	}
 	if rule.Mutate != nil {
 		chain = append(chain, newMutateFault(*rule.Mutate))
+	}
+	if rule.Headers != nil {
+		chain = append(chain, newHeadersFault(*rule.Headers))
 	}
 	if rule.Truncate != nil {
 		chain = append(chain, newTruncateFault(*rule.Truncate))

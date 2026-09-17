@@ -1,10 +1,12 @@
 package proxy_test
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -85,6 +87,80 @@ func TestHandlerModifiesResponseHeaders(t *testing.T) {
 			t.Fatalf("log %q does not record the headers fault", logs.String())
 		}
 		time.Sleep(5 * time.Millisecond)
+	}
+	if !strings.Contains(logs.String(), `details="set X-Custom-Header, set X-Existing, removed ETag, removed Server"`) {
+		t.Errorf("log %q does not record expected header details", logs.String())
+	}
+}
+
+func TestHandlerHeadersRunsAfterMutate(t *testing.T) {
+	t.Parallel()
+
+	payload := `{"user":{"name":"Ada","email":"ada@example.com"}}`
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", strconv.Itoa(len(payload)))
+		w.Header().Set("ETag", `"upstream-etag"`)
+		w.Header().Set("X-Upstream-Header", "remove-me")
+		_, _ = io.WriteString(w, payload)
+	}))
+	defer upstream.Close()
+
+	var logs lockedBuffer
+	handler, err := proxy.NewHandler(&config.Config{
+		Target: upstream.URL,
+		CORS:   config.CORSPassthrough,
+		Rules: []config.Rule{{
+			Name:    "mutate-then-headers",
+			Match:   "GET /api/user",
+			Enabled: true,
+			Mutate: &config.MutateConfig{
+				Probability: 1,
+				MaxBytes:    1 << 20,
+				Operations: []config.MutationConfig{
+					{Op: "nullify", Path: "user.email"},
+				},
+			},
+			Headers: &config.HeadersConfig{
+				Probability: 1,
+				Set: map[string]string{
+					"ETag": `"final-etag"`,
+				},
+				Remove: []string{"X-Upstream-Header"},
+			},
+		}},
+	}, log.New(&logs, "", 0))
+	if err != nil {
+		t.Fatalf("NewHandler() unexpected error: %v", err)
+	}
+	proxyServer := httptest.NewServer(handler)
+	defer proxyServer.Close()
+
+	response, err := http.Get(proxyServer.URL + "/api/user")
+	if err != nil {
+		t.Fatalf("send request: %v", err)
+	}
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+
+	var decoded struct {
+		User map[string]any `json:"user"`
+	}
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		t.Fatalf("decode body %s: %v", body, err)
+	}
+	if email, present := decoded.User["email"]; !present || email != nil {
+		t.Errorf("user email = %v, want null (mutate ran)", email)
+	}
+	if response.Header.Get("ETag") != `"final-etag"` {
+		t.Errorf("ETag = %q, want final-etag (headers ran after mutate)", response.Header.Get("ETag"))
+	}
+	if _, present := response.Header["X-Upstream-Header"]; present {
+		t.Errorf("X-Upstream-Header was not removed by headers fault: %v", response.Header["X-Upstream-Header"])
 	}
 }
 

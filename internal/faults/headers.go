@@ -1,7 +1,10 @@
 package faults
 
 import (
+	"maps"
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/Raxuis/chaosproxy/internal/config"
 )
@@ -38,6 +41,18 @@ func (f *headersFault) After(ctx *Context, response *http.Response) error {
 	for key, value := range f.set {
 		response.Header.Set(key, value)
 	}
-	emit(ctx, Injection{Fault: f.Name()})
+
+	var changes []string
+	for _, key := range slices.Sorted(maps.Keys(f.set)) {
+		changes = append(changes, "set "+key)
+	}
+	for _, key := range f.remove {
+		changes = append(changes, "removed "+key)
+	}
+
+	emit(ctx, Injection{
+		Fault:  f.Name(),
+		Detail: strings.Join(changes, ", "),
+	})
 	return nil
 }

@@ -100,13 +100,13 @@ export function ruleFaults(rule) {
   if (hang) {
     labels.push(`hang · ${percent(hang.probability)}`);
   }
-  if (headers) {
-    const count = Object.keys(headers.set ?? {}).length + (headers.remove?.length ?? 0);
-    labels.push(`headers ${count} ${count === 1 ? "header" : "headers"} · ${percent(headers.probability)}`);
-  }
   if (mutate) {
     const count = mutate.operations?.length ?? 0;
     labels.push(`mutate ${count} ${count === 1 ? "op" : "ops"} · ${percent(mutate.probability)}`);
+  }
+  if (headers) {
+    const count = Object.keys(headers.set ?? {}).length + (headers.remove?.length ?? 0);
+    labels.push(`headers ${count} ${count === 1 ? "header" : "headers"} · ${percent(headers.probability)}`);
   }
   if (truncate) {
     labels.push(`truncate ${percent(truncate.at)} · ${percent(truncate.probability)}`);

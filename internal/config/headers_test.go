@@ -65,7 +65,7 @@ func TestValidateHeaders(t *testing.T) {
 		wantError string
 	}{
 		{
-			name: "empty set and remove",
+			name: "empty set and remove with line number",
 			yaml: `
 target: http://localhost:9000
 rules:
@@ -74,7 +74,7 @@ rules:
     headers:
       probability: 0.5
 `,
-			wantError: "rules[0].headers must specify at least one header to set or remove",
+			wantError: "line 6: rules[0].headers must specify at least one header to set or remove",
 		},
 		{
 			name: "probability greater than 1",
@@ -119,7 +119,7 @@ rules:
 			wantError: "rules[0].headers.probability must be between 0 and 1",
 		},
 		{
-			name: "empty header name in remove",
+			name: "empty header name in remove with line number",
 			yaml: `
 target: http://localhost:9000
 rules:
@@ -130,10 +130,10 @@ rules:
       remove:
         - ""
 `,
-			wantError: "rules[0].headers.remove[0] header name must not be empty",
+			wantError: "line 8: rules[0].headers.remove[0] header name must not be empty",
 		},
 		{
-			name: "invalid header name characters in set",
+			name: "invalid header name characters in set with line number",
 			yaml: `
 target: http://localhost:9000
 rules:
@@ -144,10 +144,10 @@ rules:
       set:
         "bad header": value
 `,
-			wantError: `rules[0].headers.set.bad header invalid header name "bad header"`,
+			wantError: `line 8: rules[0].headers.set.bad header invalid header name "bad header"`,
 		},
 		{
-			name: "invalid header name characters in remove",
+			name: "invalid header name characters in remove with line number",
 			yaml: `
 target: http://localhost:9000
 rules:
@@ -158,7 +158,7 @@ rules:
       remove:
         - "header:colon"
 `,
-			wantError: `rules[0].headers.remove[0] invalid header name "header:colon"`,
+			wantError: `line 8: rules[0].headers.remove[0] invalid header name "header:colon"`,
 		},
 		{
 			name: "managed header Content-Length in set",
@@ -188,6 +188,65 @@ rules:
 `,
 			wantError: `"transfer-encoding" is managed by the proxy and cannot be modified`,
 		},
+		{
+			name: "case-insensitive collision in set reports line of second entry",
+			yaml: `
+target: http://localhost:9000
+rules:
+  - name: case-collision
+    match: GET /api
+    headers:
+      probability: 1
+      set:
+        cache-control: a
+        Cache-Control: b
+`,
+			wantError: `line 9: rules[0].headers.set.Cache-Control header name "Cache-Control" collides with "cache-control" (case-insensitive)`,
+		},
+		{
+			name: "header appears in both set and remove with line number",
+			yaml: `
+target: http://localhost:9000
+rules:
+  - name: set-remove-conflict
+    match: GET /api
+    headers:
+      probability: 1
+      set:
+        ETag: "123"
+      remove:
+        - etag
+`,
+			wantError: `line 10: rules[0].headers.remove[0] "etag" cannot appear in both set and remove`,
+		},
+		{
+			name: "access control header rejected under default cors reflect",
+			yaml: `
+target: http://localhost:9000
+rules:
+  - name: cors-headers
+    match: GET /api
+    headers:
+      probability: 1
+      set:
+        Access-Control-Allow-Origin: "*"
+`,
+			wantError: `"Access-Control-Allow-Origin" is managed by CORS reflection; set cors: passthrough to modify CORS headers`,
+		},
+		{
+			name: "access control header rejected in remove under default cors reflect",
+			yaml: `
+target: http://localhost:9000
+rules:
+  - name: cors-remove
+    match: GET /api
+    headers:
+      probability: 1
+      remove:
+        - access-control-allow-credentials
+`,
+			wantError: `"access-control-allow-credentials" is managed by CORS reflection; set cors: passthrough to modify CORS headers`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -214,6 +273,7 @@ func TestValidateHeadersValidVariants(t *testing.T) {
 
 	cfg, err := config.Load(writeConfig(t, `
 target: http://localhost:9000
+cors: passthrough
 rules:
   - name: only-set
     match: GET /set
@@ -221,12 +281,14 @@ rules:
       probability: 1
       set:
         X-Test: "1"
+        Access-Control-Allow-Origin: "*"
   - name: only-remove
     match: GET /remove
     headers:
       probability: 0
       remove:
         - ETag
+        - Access-Control-Allow-Methods
   - name: both
     match: GET /both
     headers:

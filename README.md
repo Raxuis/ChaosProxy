@@ -190,8 +190,8 @@ faults run in this order:
 | 2 | `reset` | `probability` | `ECONNRESET` before any response |
 | 3 | `status` | `code` (100–599), `probability`, `retry_after` seconds | an injected JSON error response; the API is not called |
 | 4 | `hang` | `probability` | no response until the client gives up |
-| 5 | `headers` | `probability`, `set`, `remove` | response headers added, overridden, or removed from the upstream response |
-| 6 | `mutate` | `probability`, `max_bytes`, `operations` | a JSON body with changed fields |
+| 5 | `mutate` | `probability`, `max_bytes`, `operations` | a JSON body with changed fields |
+| 6 | `headers` | `probability`, `set`, `remove` | response headers added, overridden, or removed from the upstream response |
 | 7 | `truncate` | `probability`, `at` (0–1) | a body cut at `at`, then a network error |
 | 8 | `bandwidth` | `bytes_per_second` | the body delivered at that rate, on every matching request |
 
@@ -288,7 +288,8 @@ rules:
 
 `set` adds new headers or overrides existing ones. `remove` deletes headers
 (case-insensitively). `Content-Length` and `Transfer-Encoding` are managed by
-the proxy and cannot be modified.
+the proxy and cannot be modified. `Access-Control-*` headers are managed by
+CORS reflection and cannot be modified unless `cors: passthrough` is configured.
 
 ### Connection resets and bandwidth
 
@@ -335,7 +336,7 @@ removes every `Access-Control-*` response header.
 | `name` | | unique name, used in logs, events, reports, and the control API |
 | `match` | | route expression |
 | `enabled` | `true` | disabled rules never match |
-| `latency`, `reset`, `status`, `hang`, `headers`, `mutate`, `truncate`, `bandwidth` | | at least one fault from the [catalog](#fault-catalog) |
+| `latency`, `reset`, `status`, `hang`, `mutate`, `headers`, `truncate`, `bandwidth` | | at least one fault from the [catalog](#fault-catalog) |
 
 The first enabled rule whose expression matches handles the request; later rules
 are ignored for it.

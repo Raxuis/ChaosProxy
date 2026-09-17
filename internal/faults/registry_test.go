@@ -25,7 +25,7 @@ func TestBuildUsesDeterministicOrder(t *testing.T) {
 	for index, fault := range chain {
 		names[index] = fault.Name()
 	}
-	if want := []string{"latency", "reset", "status", "hang", "headers", "mutate", "truncate", "bandwidth"}; !reflect.DeepEqual(names, want) {
+	if want := []string{"latency", "reset", "status", "hang", "mutate", "headers", "truncate", "bandwidth"}; !reflect.DeepEqual(names, want) {
 		t.Fatalf("fault order = %v, want %v", names, want)
 	}
 }
