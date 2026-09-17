@@ -1,8 +1,10 @@
 package config
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"net/url"
 	"slices"
@@ -133,7 +135,7 @@ func validateRules(cfg *Config, addIssue func(int, string, string)) {
 			addIssue(rule.source.lineFor("match"), prefix+".match", "must not be empty")
 		}
 		if rule.Latency == nil && rule.Status == nil && rule.Hang == nil && rule.Truncate == nil &&
-			rule.Reset == nil && rule.Bandwidth == nil && rule.Mutate == nil {
+			rule.Reset == nil && rule.Bandwidth == nil && rule.Headers == nil && rule.Mutate == nil {
 			addIssue(rule.source.line, prefix, "must configure at least one fault")
 		}
 
@@ -147,6 +149,7 @@ func validateRules(cfg *Config, addIssue func(int, string, string)) {
 		if rule.Bandwidth != nil && rule.Bandwidth.BytesPerSecond <= 0 {
 			addIssue(rule.source.lineFor("bandwidth.bytes_per_second"), prefix+".bandwidth.bytes_per_second", "must be greater than zero")
 		}
+		validateHeaders(cfg, rule, prefix, addIssue)
 		validateMutate(rule, prefix, addIssue)
 	}
 }
@@ -271,4 +274,108 @@ func (s sourceLocation) lineFor(field string) int {
 		return line
 	}
 	return s.line
+}
+
+func validateHeaders(cfg *Config, rule *Rule, prefix string, addIssue func(int, string, string)) {
+	headers := rule.Headers
+	if headers == nil {
+		return
+	}
+
+	validateProbability(rule, prefix, "headers.probability", headers.Probability, addIssue)
+	if len(headers.Set) == 0 && len(headers.Remove) == 0 {
+		addIssue(rule.source.lineFor("headers"), prefix+".headers", "must specify at least one header to set or remove")
+	}
+
+	getSetLine := func(name string) int {
+		if name == "" {
+			return rule.source.lineFor("headers.set")
+		}
+		return rule.source.lineFor("headers.set." + name)
+	}
+
+	setNames := slices.SortedFunc(maps.Keys(headers.Set), func(a, b string) int {
+		lineA := getSetLine(a)
+		lineB := getSetLine(b)
+		if lineA != lineB {
+			return cmp.Compare(lineA, lineB)
+		}
+		return cmp.Compare(a, b)
+	})
+
+	seenSet := make(map[string]string, len(headers.Set))
+	for _, name := range setNames {
+		field := prefix + ".headers.set." + name
+		if name == "" {
+			field = prefix + ".headers.set"
+		}
+		line := getSetLine(name)
+		if !validateHeaderName(cfg, addIssue, line, field, name) {
+			continue
+		}
+		lower := strings.ToLower(name)
+		if first, exists := seenSet[lower]; exists {
+			addIssue(line, field, fmt.Sprintf("header name %q collides with %q (case-insensitive)", name, first))
+			continue
+		}
+		seenSet[lower] = name
+	}
+
+	for index, name := range headers.Remove {
+		line := rule.source.lineFor(fmt.Sprintf("headers.remove[%d]", index))
+		field := fmt.Sprintf("%s.headers.remove[%d]", prefix, index)
+		if !validateHeaderName(cfg, addIssue, line, field, name) {
+			continue
+		}
+		lower := strings.ToLower(name)
+		if _, inSet := seenSet[lower]; inSet {
+			addIssue(line, field, fmt.Sprintf("%q cannot appear in both set and remove", name))
+		}
+	}
+}
+
+func validateHeaderName(cfg *Config, addIssue func(int, string, string), line int, field, name string) bool {
+	if name == "" {
+		addIssue(line, field, "header name must not be empty")
+		return false
+	}
+	if !isValidHeaderName(name) {
+		addIssue(line, field, fmt.Sprintf("invalid header name %q", name))
+		return false
+	}
+	if isManagedHeader(name) {
+		addIssue(line, field, fmt.Sprintf("%q is managed by the proxy and cannot be modified", name))
+		return false
+	}
+	if cfg.CORS != CORSPassthrough && strings.HasPrefix(strings.ToLower(name), "access-control-") {
+		addIssue(line, field, fmt.Sprintf("%q is managed by CORS reflection; set cors: passthrough to modify CORS headers", name))
+		return false
+	}
+	return true
+}
+
+func isManagedHeader(name string) bool {
+	return strings.EqualFold(name, "Content-Length") || strings.EqualFold(name, "Transfer-Encoding")
+}
+
+func isValidHeaderName(name string) bool {
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if !isTokenChar(c) {
+			return false
+		}
+	}
+	return true
+}
+
+func isTokenChar(c byte) bool {
+	if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' {
+		return true
+	}
+	switch c {
+	case '!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~':
+		return true
+	default:
+		return false
+	}
 }

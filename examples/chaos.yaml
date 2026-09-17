@@ -39,6 +39,16 @@ rules:
           path: user.name
           factor: 20
 
+  - name: stale-cached-response
+    match: GET /api/config
+    headers:
+      probability: 0.5
+      set:
+        Cache-Control: max-age=86400
+        X-Chaos-Fault: injected
+      remove:
+        - ETag
+
   - name: reset-checkout
     match: POST /api/checkout
     reset:
