@@ -1,6 +1,9 @@
 package config
 
-import "slices"
+import (
+	"maps"
+	"slices"
+)
 
 // Clone returns a deep copy that callers may safely modify before publishing as
 // a new immutable runtime configuration.
@@ -53,6 +56,12 @@ func cloneRule(rule Rule) Rule {
 	if rule.Bandwidth != nil {
 		value := *rule.Bandwidth
 		cloned.Bandwidth = &value
+	}
+	if rule.Headers != nil {
+		value := *rule.Headers
+		value.Set = maps.Clone(rule.Headers.Set)
+		value.Remove = slices.Clone(rule.Headers.Remove)
+		cloned.Headers = &value
 	}
 	if rule.Mutate != nil {
 		value := *rule.Mutate

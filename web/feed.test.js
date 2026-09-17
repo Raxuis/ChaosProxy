@@ -80,4 +80,12 @@ test("ruleFaults describes every configured fault", () => {
     ruleFaults({ mutate: { probability: 0.5, operations: [{ op: "nullify", path: "user.email" }, { op: "drop", path: "id" }] } }),
     ["mutate 2 ops · 50%"],
   );
+  assert.deepEqual(
+    ruleFaults({ headers: { probability: 0.5, set: { "X-Custom": "val" }, remove: ["ETag"] } }),
+    ["headers 2 headers · 50%"],
+  );
+  assert.deepEqual(
+    ruleFaults({ headers: { probability: 1, set: { "X-Only": "val" } } }),
+    ["headers 1 header · 100%"],
+  );
 });

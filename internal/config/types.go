@@ -55,9 +55,17 @@ type Rule struct {
 	Truncate  *TruncateConfig  `json:"truncate,omitempty" yaml:"truncate,omitempty"`
 	Reset     *ResetConfig     `json:"reset,omitempty" yaml:"reset,omitempty"`
 	Bandwidth *BandwidthConfig `json:"bandwidth,omitempty" yaml:"bandwidth,omitempty"`
+	Headers   *HeadersConfig   `json:"headers,omitempty" yaml:"headers,omitempty"`
 	Mutate    *MutateConfig    `json:"mutate,omitempty" yaml:"mutate,omitempty"`
 
 	source sourceLocation
+}
+
+// HeadersConfig adds, overrides, or removes upstream response headers.
+type HeadersConfig struct {
+	Probability float64           `json:"probability" yaml:"probability"`
+	Set         map[string]string `json:"set,omitempty" yaml:"set,omitempty"`
+	Remove      []string          `json:"remove,omitempty" yaml:"remove,omitempty"`
 }
 
 // MutateConfig rewrites JSON response bodies that fit within MaxBytes.
@@ -138,6 +146,7 @@ type rawRule struct {
 	Truncate  *TruncateConfig  `yaml:"truncate"`
 	Reset     *ResetConfig     `yaml:"reset"`
 	Bandwidth *BandwidthConfig `yaml:"bandwidth"`
+	Headers   *HeadersConfig   `yaml:"headers"`
 	Mutate    *MutateConfig    `yaml:"mutate"`
 }
 
