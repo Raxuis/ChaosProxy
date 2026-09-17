@@ -42,12 +42,21 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+      - name: Update npm for trusted publishing
+        run: npm install -g npm@^11.5.1
       - name: Prepare package
         working-directory: npm
         run: |
           cp ../LICENSE LICENSE
           npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
           npm test
+      - name: Check published version
+        id: published
+        run: |
+          if npm view "chaosproxy@${GITHUB_REF_NAME#v}" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish with provenance
+        if: steps.published.outputs.exists != 'true'
         working-directory: npm
         run: npm publish --provenance --access public

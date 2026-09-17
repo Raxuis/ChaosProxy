@@ -1,7 +1,7 @@
 # Task 15 — Demonstration and launch preparation
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-17
+- Status: `completed`
+- Approval: granted on 2026-09-17
 - Depends on: task 14
 
 ## Goal
@@ -16,7 +16,7 @@ created on a third-party service in this task; that happens in task 16.
 - [x] Record the 15-second demonstration GIF and place it in the README.
 - [x] Draft channel-specific launch copy grounded in the demonstration, kept as a local draft.
 - [x] Draft three good-first-issue fault ideas, kept as local drafts.
-- [ ] Receive explicit user approval.
+- [x] Receive explicit user approval.
 
 ## Acceptance evidence
 
@@ -63,3 +63,4 @@ created on a third-party service in this task; that happens in task 16.
 |---|---|
 | 2026-09-17 | Scope limited to local preparation; publication, name checks, and external issues moved to task 16. |
 | 2026-09-17 | Manual checks closed, Conduit finding, Retry-After and dashboard fixes, demo GIF, and drafts done; approval requested. |
+| 2026-09-17 | User approved task 15. |

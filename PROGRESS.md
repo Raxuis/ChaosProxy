@@ -33,8 +33,8 @@ Every task follows this state machine:
 | 12 | 3 | CI integrations and reports | `completed` | [task-12-ci-integrations.md](docs/progress/task-12-ci-integrations.md) |
 | 13 | 4 | Packaging and distribution | `completed` | [task-13-packaging.md](docs/progress/task-13-packaging.md) |
 | 14 | 4 | Final README | `completed` | [task-14-final-readme.md](docs/progress/task-14-final-readme.md) |
-| 15 | Launch | Demonstration and launch preparation | `awaiting_validation` | [task-15-launch.md](docs/progress/task-15-launch.md) |
-| 16 | Release | Release and publication | `pending` | [task-16-release.md](docs/progress/task-16-release.md) |
+| 15 | Launch | Demonstration and launch preparation | `completed` | [task-15-launch.md](docs/progress/task-15-launch.md) |
+| 16 | Release | Release and publication | `in_progress` | [task-16-release.md](docs/progress/task-16-release.md) |
 | R1 | Review | Code quality and open-source readiness | `completed` | [task-R1-open-source-review.md](docs/progress/task-R1-open-source-review.md) |
 
 ## Phase acceptance checks
