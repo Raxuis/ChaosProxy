@@ -1,6 +1,7 @@
 # Chaos Proxy
 
-A HTTP-aware chaos proxy for frontend developers — configure latency, errors, truncation and payload mutations per route, in code, reproducibly, in CI.
+A HTTP-aware chaos proxy for frontend developers — configure latency, errors, truncation and payload mutations per
+route, in code, reproducibly, in CI.
 
 ![Chaos Proxy nulls one article in a real Vue app's API response, and the whole feed never finishes loading](docs/assets/demo.gif)
 
@@ -44,14 +45,14 @@ whose `email` is suddenly `null`.
 
 How it compares with tools frontend developers already use:
 
-| | Chaos Proxy | [chaos-proxy](https://github.com/gkoos/chaos-proxy) (npm) | Toxiproxy | MSW | mitmproxy | Browser DevTools |
-|---|---|---|---|---|---|---|
-| Works at | HTTP reverse proxy, single Go binary | HTTP proxy on Koa, Node.js CLI and library | TCP proxy | request interception in the browser or Node.js | HTTP(S) intercepting proxy | the browser tab |
-| Traffic | the real API | the real API | the real service | mocked handlers, optional passthrough | the real server | the real server |
-| Targets | method and path globs | method and Koa Router paths, plus global middleware | a whole proxied port | handlers you write | Python addons you write | URL patterns, whole tab for throttling |
-| Faults | latency, status, hang, reset, truncation, bandwidth, JSON mutation | latency, failures, every-nth failures, dropped connections, rate limiting, throttling, custom middleware | latency, bandwidth, timeouts, resets, slicing, data limits | anything you code | anything you code | throttling, blocking, local overrides |
-| Repeatable runs | seeds and step-by-step scenarios | every-nth failures | probabilistic toxicity | deterministic code | deterministic code | manual |
-| Covers server-side fetches | yes | yes | yes | Node.js only, in process | yes, when configured as proxy | no |
+|                            | Chaos Proxy                                                        | [chaos-proxy](https://github.com/gkoos/chaos-proxy) (npm)                                                | Toxiproxy                                                  | MSW                                            | mitmproxy                     | Browser DevTools                       |
+|----------------------------|--------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|------------------------------------------------------------|------------------------------------------------|-------------------------------|----------------------------------------|
+| Works at                   | HTTP reverse proxy, single Go binary                               | HTTP proxy on Koa, Node.js CLI and library                                                               | TCP proxy                                                  | request interception in the browser or Node.js | HTTP(S) intercepting proxy    | the browser tab                        |
+| Traffic                    | the real API                                                       | the real API                                                                                             | the real service                                           | mocked handlers, optional passthrough          | the real server               | the real server                        |
+| Targets                    | method and path globs                                              | method and Koa Router paths, plus global middleware                                                      | a whole proxied port                                       | handlers you write                             | Python addons you write       | URL patterns, whole tab for throttling |
+| Faults                     | latency, status, hang, reset, truncation, bandwidth, JSON mutation | latency, failures, every-nth failures, dropped connections, rate limiting, throttling, custom middleware | latency, bandwidth, timeouts, resets, slicing, data limits | anything you code                              | anything you code             | throttling, blocking, local overrides  |
+| Repeatable runs            | seeds and step-by-step scenarios                                   | every-nth failures                                                                                       | probabilistic toxicity                                     | deterministic code                             | deterministic code            | manual                                 |
+| Covers server-side fetches | yes                                                                | yes                                                                                                      | yes                                                        | Node.js only, in process                       | yes, when configured as proxy | no                                     |
 
 Choose chaos-proxy for rate limiting or custom Node.js middleware, Toxiproxy for
 databases and other non-HTTP services, MSW when there is no backend yet, and
@@ -101,6 +102,18 @@ Requires Go 1.25 or newer:
 go install github.com/Raxuis/chaosproxy/cmd/chaosproxy@latest
 ```
 
+### Install script
+
+Linux and macOS, handy for CI images without Node.js:
+
+```sh
+curl -sSL https://raw.githubusercontent.com/Raxuis/ChaosProxy/main/scripts/install.sh | sh
+```
+
+Pin a version with `CHAOSPROXY_VERSION=v1.2.3` and the install directory with
+`CHAOSPROXY_BIN_DIR=~/.local/bin`. The script verifies the release checksum
+before installing.
+
 ### Binaries
 
 Download an archive for your platform from the
@@ -130,21 +143,21 @@ Without `--config` or `--profile`, requests pass through untouched. The target
 path is kept as a prefix: with `--target http://localhost:9000/v1`, a request to
 `/users` reaches `/v1/users`. Press Ctrl+C to stop gracefully.
 
-| Flag | Default | Description |
-|---|---|---|
-| `--config PATH` | | YAML configuration file, reloaded on change |
-| `--target URL` | | upstream base URL; overrides `target` from the file |
-| `--profile NAME` | | built-in fault profile; requires `--target`, excludes `--config` |
-| `--list-profiles` | | list built-in profiles and exit |
-| `--host HOST` | `127.0.0.1` | listen address for both planes |
-| `--port PORT` | `7070` | data-plane port |
-| `--control-port PORT` | `7071` | dashboard and control API port |
-| `--seed N` | random | seed for fault decisions; overrides `seed` from the file |
-| `--header-overrides` | off | let clients force faults with the `X-Chaos` header |
-| `--report PATH` | | write a JSON run report on shutdown, `-` for standard output |
-| `--max-requests N` | | shut down after N data-plane requests |
-| `--exit-on-error` | off | shut down and exit 1 when a request fails inside the proxy |
-| `--version` | | print the version and exit |
+| Flag                  | Default     | Description                                                      |
+|-----------------------|-------------|------------------------------------------------------------------|
+| `--config PATH`       |             | YAML configuration file, reloaded on change                      |
+| `--target URL`        |             | upstream base URL; overrides `target` from the file              |
+| `--profile NAME`      |             | built-in fault profile; requires `--target`, excludes `--config` |
+| `--list-profiles`     |             | list built-in profiles and exit                                  |
+| `--host HOST`         | `127.0.0.1` | listen address for both planes                                   |
+| `--port PORT`         | `7070`      | data-plane port                                                  |
+| `--control-port PORT` | `7071`      | dashboard and control API port                                   |
+| `--seed N`            | random      | seed for fault decisions; overrides `seed` from the file         |
+| `--header-overrides`  | off         | let clients force faults with the `X-Chaos` header               |
+| `--report PATH`       |             | write a JSON run report on shutdown, `-` for standard output     |
+| `--max-requests N`    |             | shut down after N data-plane requests                            |
+| `--exit-on-error`     | off         | shut down and exit 1 when a request fails inside the proxy       |
+| `--version`           |             | print the version and exit                                       |
 
 A minimal configuration:
 
@@ -184,21 +197,24 @@ last valid configuration stays active.
 A rule can combine several faults. Each probability is drawn independently, and
 faults run in this order:
 
-| Order | Fault | Fields | What the client sees |
-|---|---|---|---|
-| 1 | `latency` | `dist: fixed` with `value`, `jitter`; or `dist: lognormal` with `p50`, `p99` | a delay before the request is handled, on every matching request |
-| 2 | `reset` | `probability` | `ECONNRESET` before any response |
-| 3 | `status` | `code` (100–599), `probability`, `retry_after` seconds | an injected JSON error response; the API is not called |
-| 4 | `hang` | `probability` | no response until the client gives up |
-| 5 | `mutate` | `probability`, `max_bytes`, `operations` | a JSON body with changed fields |
-| 6 | `truncate` | `probability`, `at` (0–1) | a body cut at `at`, then a network error |
-| 7 | `bandwidth` | `bytes_per_second` | the body delivered at that rate, on every matching request |
+| Order | Fault       | Fields                                                                       | What the client sees                                             |
+|-------|-------------|------------------------------------------------------------------------------|------------------------------------------------------------------|
+| 1     | `latency`   | `dist: fixed` with `value`, `jitter`; or `dist: lognormal` with `p50`, `p99` | a delay before the request is handled, on every matching request |
+| 2     | `reset`     | `probability`                                                                | `ECONNRESET` before any response                                 |
+| 3     | `status`    | `code` (100–599), `probability`, `retry_after` seconds                       | an injected JSON error response; the API is not called           |
+| 4     | `hang`      | `probability`                                                                | no response until the client gives up                            |
+| 5     | `mutate`    | `probability`, `max_bytes`, `operations`                                     | a JSON body with changed fields                                  |
+| 6     | `truncate`  | `probability`, `at` (0–1)                                                    | a body cut at `at`, then a network error                         |
+| 7     | `bandwidth` | `bytes_per_second`                                                           | the body delivered at that rate, on every matching request       |
 
 Durations use Go syntax such as `250ms`, `1.5s`, or `2m`. Probabilities range
 from `0` to `1`. An injected `status` response looks like this:
 
 ```json
-{"error":"injected by chaosproxy","rule":"flaky-orders"}
+{
+  "error": "injected by chaosproxy",
+  "rule": "flaky-orders"
+}
 ```
 
 With `cors: reflect`, injected responses expose `Retry-After` to browser code, so
@@ -249,13 +265,13 @@ rules:
           path: items.*.price
 ```
 
-| Operation | Effect |
-|---|---|
-| `nullify` | set the value to `null` |
-| `empty` | replace it with `""`, `[]`, `{}`, `0`, or `false` depending on its type |
-| `inflate` | repeat the items of an array `factor` times (2–1000, default 10) |
-| `stretch` | repeat a string `factor` times (2–1000, default 10) |
-| `drop` | remove the key or array element |
+| Operation | Effect                                                                  |
+|-----------|-------------------------------------------------------------------------|
+| `nullify` | set the value to `null`                                                 |
+| `empty`   | replace it with `""`, `[]`, `{}`, `0`, or `false` depending on its type |
+| `inflate` | repeat the items of an array `factor` times (2–1000, default 10)        |
+| `stretch` | repeat a string `factor` times (2–1000, default 10)                     |
+| `drop`    | remove the key or array element                                         |
 
 Paths are dotted, use numbers for array indexes, and `*` for every element or
 key: `items.0.price`, `items.*.price`. Keys containing dots cannot be addressed.
@@ -293,26 +309,26 @@ rules:
 
 ### Top level
 
-| Field | Default | Description |
-|---|---|---|
-| `target` | | absolute `http` or `https` URL of the API; `--target` overrides it |
-| `seed` | random | seed for every probabilistic decision; `--seed` overrides it |
-| `cors` | `reflect` | `reflect`, `passthrough`, or `off`; see [Security defaults](#security-defaults) |
-| `cors_origins` | loopback origins | origins that receive reflected CORS headers, or `"*"` |
-| `rules` | | ordered fault rules |
-| `scenarios` | | step-by-step fault sequences |
+| Field          | Default          | Description                                                                     |
+|----------------|------------------|---------------------------------------------------------------------------------|
+| `target`       |                  | absolute `http` or `https` URL of the API; `--target` overrides it              |
+| `seed`         | random           | seed for every probabilistic decision; `--seed` overrides it                    |
+| `cors`         | `reflect`        | `reflect`, `passthrough`, or `off`; see [Security defaults](#security-defaults) |
+| `cors_origins` | loopback origins | origins that receive reflected CORS headers, or `"*"`                           |
+| `rules`        |                  | ordered fault rules                                                             |
+| `scenarios`    |                  | step-by-step fault sequences                                                    |
 
 `cors: passthrough` leaves the API's CORS headers unchanged, and `cors: off`
 removes every `Access-Control-*` response header.
 
 ### Rules
 
-| Field | Default | Description |
-|---|---|---|
-| `name` | | unique name, used in logs, events, reports, and the control API |
-| `match` | | route expression |
-| `enabled` | `true` | disabled rules never match |
-| `latency`, `reset`, `status`, `hang`, `mutate`, `truncate`, `bandwidth` | | at least one fault from the [catalog](#fault-catalog) |
+| Field                                                                   | Default | Description                                                     |
+|-------------------------------------------------------------------------|---------|-----------------------------------------------------------------|
+| `name`                                                                  |         | unique name, used in logs, events, reports, and the control API |
+| `match`                                                                 |         | route expression                                                |
+| `enabled`                                                               | `true`  | disabled rules never match                                      |
+| `latency`, `reset`, `status`, `hang`, `mutate`, `truncate`, `bandwidth` |         | at least one fault from the [catalog](#fault-catalog)           |
 
 The first enabled rule whose expression matches handles the request; later rules
 are ignored for it.
@@ -322,26 +338,26 @@ are ignored for it.
 An expression is `METHOD /path` or `/path` for every method. Methods are
 case-insensitive and query strings are ignored.
 
-| Pattern | Matches | Does not match |
-|---|---|---|
-| `GET /api/users` | `GET /api/users?page=2` | `GET /api/users/`, `POST /api/users` |
-| `/api/users/*` | `/api/users/42` | `/api/users/`, `/api/users/42/orders` |
-| `/api/search*` | `/api/search`, `/api/searches` | `/api/search/recent` |
-| `/api/**` | `/api`, `/api/users/42/orders` | `/apis` |
-| `/**` | every path | |
+| Pattern          | Matches                        | Does not match                        |
+|------------------|--------------------------------|---------------------------------------|
+| `GET /api/users` | `GET /api/users?page=2`        | `GET /api/users/`, `POST /api/users`  |
+| `/api/users/*`   | `/api/users/42`                | `/api/users/`, `/api/users/42/orders` |
+| `/api/search*`   | `/api/search`, `/api/searches` | `/api/search/recent`                  |
+| `/api/**`        | `/api`, `/api/users/42/orders` | `/apis`                               |
+| `/**`            | every path                     |                                       |
 
 `*` matches within one path segment and `**` spans any number of segments, and
 must fill a whole segment. Trailing slashes are significant.
 
 ### Scenarios
 
-| Field | Default | Description |
-|---|---|---|
-| `name` | | unique across rules and scenarios |
-| `match` | | route expression |
-| `enabled` | `true` | disabled scenarios never match |
-| `steps` | | one [directive list](#header-overrides) per request |
-| `on_exhausted` | `passthrough` | `passthrough`, `repeat`, or `last` |
+| Field          | Default       | Description                                         |
+|----------------|---------------|-----------------------------------------------------|
+| `name`         |               | unique across rules and scenarios                   |
+| `match`        |               | route expression                                    |
+| `enabled`      | `true`        | disabled scenarios never match                      |
+| `steps`        |               | one [directive list](#header-overrides) per request |
+| `on_exhausted` | `passthrough` | `passthrough`, `repeat`, or `last`                  |
 
 ## Profiles
 
@@ -352,13 +368,13 @@ file:
 chaosproxy --target http://localhost:9000 --profile flaky-api
 ```
 
-| Profile | Faults |
-|---|---|
-| `slow-network` | lognormal latency (p50 400ms, p99 3s) and 128 KB/s bandwidth |
-| `flaky-api` | 150ms ±100ms latency and 10% 503 responses with `Retry-After: 2` |
-| `connection-drops` | 5% TCP resets and 10% of bodies truncated at half |
-| `broken-payloads` | 25% of JSON bodies with nested fields set to `null`, 5% truncated |
-| `outage` | every request fails with 503 and `Retry-After: 30` |
+| Profile            | Faults                                                            |
+|--------------------|-------------------------------------------------------------------|
+| `slow-network`     | lognormal latency (p50 400ms, p99 3s) and 128 KB/s bandwidth      |
+| `flaky-api`        | 150ms ±100ms latency and 10% 503 responses with `Retry-After: 2`  |
+| `connection-drops` | 5% TCP resets and 10% of bodies truncated at half                 |
+| `broken-payloads`  | 25% of JSON bodies with nested fields set to `null`, 5% truncated |
+| `outage`           | every request fails with 503 and `Retry-After: 30`                |
 
 `--list-profiles` prints the same list. Profiles cannot be combined with
 `--config`; copy one from [`internal/profiles`](internal/profiles) into a YAML
@@ -420,15 +436,15 @@ GET /api/orders
 X-Chaos: latency=800ms; status=503
 ```
 
-| Directive | Effect |
-|---|---|
-| `latency=800ms` | wait before handling the request |
-| `status=503` | respond with this status without calling the API |
-| `hang` | never respond |
-| `reset` | reset the TCP connection |
-| `truncate=0.5` | cut the response body at this fraction |
-| `bandwidth=32768` | deliver the body at this many bytes per second |
-| `off` | forward the request without any fault |
+| Directive         | Effect                                           |
+|-------------------|--------------------------------------------------|
+| `latency=800ms`   | wait before handling the request                 |
+| `status=503`      | respond with this status without calling the API |
+| `hang`            | never respond                                    |
+| `reset`           | reset the TCP connection                         |
+| `truncate=0.5`    | cut the response body at this fraction           |
+| `bandwidth=32768` | deliver the body at this many bytes per second   |
+| `off`             | forward the request without any fault            |
 
 The header replaces rule matching for that request, never shifts rule decision
 sequences, and is removed before the request reaches the API. `status`, `hang`,
@@ -444,16 +460,16 @@ trigger counts, and a live request feed. Press `/` to filter the feed and `p` to
 pause it. The dashboard is embedded in the binary and loads nothing from the
 network.
 
-| Endpoint | Description |
-|---|---|
-| `GET /healthz` | liveness check |
-| `GET /api/stats` | request, status, and per-rule fault counts |
-| `GET /api/events` | Server-Sent Events stream of requests |
-| `GET /api/config` | effective configuration, including the seed |
-| `PUT /api/rules/{name}` | enable or disable a rule with `{"enabled": false}` |
-| `POST /api/reset` | restart decision sequences, scenarios, and counters |
-| `GET /api/scenarios` | scenario progress |
-| `POST /api/scenarios/{name}/reset` | restart one scenario |
+| Endpoint                           | Description                                         |
+|------------------------------------|-----------------------------------------------------|
+| `GET /healthz`                     | liveness check                                      |
+| `GET /api/stats`                   | request, status, and per-rule fault counts          |
+| `GET /api/events`                  | Server-Sent Events stream of requests               |
+| `GET /api/config`                  | effective configuration, including the seed         |
+| `PUT /api/rules/{name}`            | enable or disable a rule with `{"enabled": false}`  |
+| `POST /api/reset`                  | restart decision sequences, scenarios, and counters |
+| `GET /api/scenarios`               | scenario progress                                   |
+| `POST /api/scenarios/{name}/reset` | restart one scenario                                |
 
 ```sh
 curl -X PUT http://localhost:7071/api/rules/flaky-orders -d '{"enabled": false}'
@@ -480,10 +496,40 @@ scenario progress, total, upstream, and injected latency percentiles, the first
 {
   "stopped_by": "max-requests",
   "seed": 7,
-  "totals": { "requests": 12, "injected": 5, "errors": 0, "statuses": { "2xx": 7, "5xx": 5 } },
-  "rules": { "flaky-bundle": { "matched": 10, "faulted": 4, "faults": { "status": 4 } } },
-  "scenarios": [{ "name": "account-recovers", "served": 2, "exhausted": true }],
-  "latency_ms": { "total": { "p50": 0, "p90": 1, "p95": 4, "p99": 4, "max": 4 } },
+  "totals": {
+    "requests": 12,
+    "injected": 5,
+    "errors": 0,
+    "statuses": {
+      "2xx": 7,
+      "5xx": 5
+    }
+  },
+  "rules": {
+    "flaky-bundle": {
+      "matched": 10,
+      "faulted": 4,
+      "faults": {
+        "status": 4
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "name": "account-recovers",
+      "served": 2,
+      "exhausted": true
+    }
+  ],
+  "latency_ms": {
+    "total": {
+      "p50": 0,
+      "p90": 1,
+      "p95": 4,
+      "p99": 4,
+      "max": 4
+    }
+  },
   "errors": []
 }
 ```
