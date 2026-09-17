@@ -135,12 +135,14 @@ func validateRules(cfg *Config, addIssue func(int, string, string)) {
 			addIssue(rule.source.lineFor("match"), prefix+".match", "must not be empty")
 		}
 		if rule.Latency == nil && rule.Status == nil && rule.Hang == nil && rule.Truncate == nil &&
-			rule.Reset == nil && rule.Bandwidth == nil && rule.Headers == nil && rule.Mutate == nil {
+			rule.Reset == nil && rule.Bandwidth == nil && rule.Headers == nil && rule.Mutate == nil &&
+			rule.Redirect == nil {
 			addIssue(rule.source.line, prefix, "must configure at least one fault")
 		}
 
 		validateLatency(rule, prefix, addIssue)
 		validateStatus(rule, prefix, addIssue)
+		validateRedirect(rule, prefix, addIssue)
 		validateProbability(rule, prefix, "hang.probability", probabilityOfHang(rule), addIssue)
 		validateTruncate(rule, prefix, addIssue)
 		if rule.Reset != nil {
@@ -224,6 +226,29 @@ func validateStatus(rule *Rule, prefix string, addIssue func(int, string, string
 	validateProbability(rule, prefix, "status.probability", rule.Status.Probability, addIssue)
 	if rule.Status.RetryAfter < 0 {
 		addIssue(rule.source.lineFor("status.retry_after"), prefix+".status.retry_after", "must not be negative")
+	}
+}
+
+func validateRedirect(rule *Rule, prefix string, addIssue func(int, string, string)) {
+	if rule.Redirect == nil {
+		return
+	}
+
+	if !isRedirectCode(rule.Redirect.Code) {
+		addIssue(rule.source.lineFor("redirect.code"), prefix+".redirect.code", "must be 301, 302, 303, 307, or 308")
+	}
+	validateProbability(rule, prefix, "redirect.probability", rule.Redirect.Probability, addIssue)
+	if strings.TrimSpace(rule.Redirect.Location) == "" {
+		addIssue(rule.source.lineFor("redirect.location"), prefix+".redirect.location", "must not be empty")
+	}
+}
+
+func isRedirectCode(code int) bool {
+	switch code {
+	case 301, 302, 303, 307, 308:
+		return true
+	default:
+		return false
 	}
 }
 

@@ -189,11 +189,12 @@ faults run in this order:
 | 1 | `latency` | `dist: fixed` with `value`, `jitter`; or `dist: lognormal` with `p50`, `p99` | a delay before the request is handled, on every matching request |
 | 2 | `reset` | `probability` | `ECONNRESET` before any response |
 | 3 | `status` | `code` (100–599), `probability`, `retry_after` seconds | an injected JSON error response; the API is not called |
-| 4 | `hang` | `probability` | no response until the client gives up |
-| 5 | `mutate` | `probability`, `max_bytes`, `operations` | a JSON body with changed fields |
-| 6 | `headers` | `probability`, `set`, `remove` | response headers added, overridden, or removed from the upstream response |
-| 7 | `truncate` | `probability`, `at` (0–1) | a body cut at `at`, then a network error |
-| 8 | `bandwidth` | `bytes_per_second` | the body delivered at that rate, on every matching request |
+| 4 | `redirect` | `code` (301, 302, 303, 307, 308), `location`, `probability` | an HTTP redirect to `location`; the API is not called |
+| 5 | `hang` | `probability` | no response until the client gives up |
+| 6 | `mutate` | `probability`, `max_bytes`, `operations` | a JSON body with changed fields |
+| 7 | `headers` | `probability`, `set`, `remove` | response headers added, overridden, or removed from the upstream response |
+| 8 | `truncate` | `probability`, `at` (0–1) | a body cut at `at`, then a network error |
+| 9 | `bandwidth` | `bytes_per_second` | the body delivered at that rate, on every matching request |
 
 Durations use Go syntax such as `250ms`, `1.5s`, or `2m`. Probabilities range
 from `0` to `1`. An injected `status` response looks like this:
@@ -202,8 +203,21 @@ from `0` to `1`. An injected `status` response looks like this:
 {"error":"injected by chaosproxy","rule":"flaky-orders"}
 ```
 
-With `cors: reflect`, injected responses expose `Retry-After` to browser code, so
-cross-origin frontends can test their backoff.
+With `cors: reflect`, injected responses expose `Retry-After` and `Location` to
+browser code, so cross-origin frontends can test their backoff and redirects.
+
+### Redirect
+
+`redirect` answers with an HTTP redirect status (301, 302, 303, 307, or 308) and
+sets the `Location` header, without calling the upstream API. Useful for testing
+how frontends or API clients handle session expiration or URL moves:
+
+```yaml
+redirect:
+  probability: 1
+  code: 302
+  location: /login
+```
 
 ### Latency
 
@@ -336,7 +350,7 @@ removes every `Access-Control-*` response header.
 | `name` | | unique name, used in logs, events, reports, and the control API |
 | `match` | | route expression |
 | `enabled` | `true` | disabled rules never match |
-| `latency`, `reset`, `status`, `hang`, `mutate`, `headers`, `truncate`, `bandwidth` | | at least one fault from the [catalog](#fault-catalog) |
+| `latency`, `reset`, `status`, `redirect`, `hang`, `mutate`, `headers`, `truncate`, `bandwidth` | | at least one fault from the [catalog](#fault-catalog) |
 
 The first enabled rule whose expression matches handles the request; later rules
 are ignored for it.
@@ -448,6 +462,7 @@ X-Chaos: latency=800ms; status=503
 |---|---|
 | `latency=800ms` | wait before handling the request |
 | `status=503` | respond with this status without calling the API |
+| `redirect=302:/login` | respond with a 3xx redirect to this location without calling the API |
 | `hang` | never respond |
 | `reset` | reset the TCP connection |
 | `truncate=0.5` | cut the response body at this fraction |
@@ -455,8 +470,8 @@ X-Chaos: latency=800ms; status=503
 | `off` | forward the request without any fault |
 
 The header replaces rule matching for that request, never shifts rule decision
-sequences, and is removed before the request reaches the API. `status`, `hang`,
-and `reset` cannot be combined. Responses carry `X-Chaos-Applied` with the
+sequences, and is removed before the request reaches the API. `status`,
+`redirect`, `hang`, and `reset` cannot be combined. Responses carry `X-Chaos-Applied` with the
 forced faults, `off`, or `disabled` when the proxy runs without
 `--header-overrides`. An invalid header gets a `400` response explaining why.
 

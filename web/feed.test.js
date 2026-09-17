@@ -88,4 +88,12 @@ test("ruleFaults describes every configured fault", () => {
     ruleFaults({ headers: { probability: 1, set: { "X-Only": "val" } } }),
     ["headers 1 header · 100%"],
   );
+  assert.deepEqual(
+    ruleFaults({ redirect: { code: 302, location: "/login", probability: 1 } }),
+    ["redirect 302 /login · 100%"],
+  );
+  assert.deepEqual(
+    ruleFaults({ redirect: { code: 307, location: "https://auth.example.com", probability: 0.5 } }),
+    ["redirect 307 https://auth.example.com · 50%"],
+  );
 });

@@ -14,6 +14,7 @@ var directiveExamples = map[string]string{
 	"status":    "status=503",
 	"truncate":  "truncate=0.5",
 	"bandwidth": "bandwidth=32768",
+	"redirect":  "redirect=302:/login",
 }
 
 // ParseFaults parses directives such as "latency=800ms; status=503" into faults that
@@ -38,12 +39,12 @@ func ParseFaults(value string) (Rule, string, error) {
 			if hasArgument {
 				return Rule{}, "", fmt.Errorf("%s takes no value", name)
 			}
-		case "latency", "status", "truncate", "bandwidth":
+		case "latency", "status", "truncate", "bandwidth", "redirect":
 			if argument == "" {
 				return Rule{}, "", fmt.Errorf("%s needs a value, for example %s", name, directiveExamples[name])
 			}
 		default:
-			return Rule{}, "", fmt.Errorf("unknown fault %q; use latency, status, hang, reset, truncate, bandwidth, or off", name)
+			return Rule{}, "", fmt.Errorf("unknown fault %q; use latency, status, hang, reset, truncate, bandwidth, redirect, or off", name)
 		}
 
 		switch name {
@@ -63,6 +64,16 @@ func ParseFaults(value string) (Rule, string, error) {
 				return Rule{}, "", fmt.Errorf("status must be an HTTP status code between 100 and 599, got %q", argument)
 			}
 			rule.Status = &StatusConfig{Code: code, Probability: 1}
+		case "redirect":
+			rawCode, location, hasLocation := strings.Cut(argument, ":")
+			if !hasLocation || strings.TrimSpace(location) == "" {
+				return Rule{}, "", fmt.Errorf("redirect must be <code>:<location> such as 302:/login, got %q", argument)
+			}
+			code, err := strconv.Atoi(rawCode)
+			if err != nil || !isRedirectCode(code) {
+				return Rule{}, "", fmt.Errorf("redirect code must be 301, 302, 303, 307, or 308, got %q", rawCode)
+			}
+			rule.Redirect = &RedirectConfig{Code: code, Location: location, Probability: 1}
 		case "truncate":
 			at, err := strconv.ParseFloat(argument, 64)
 			if err != nil || math.IsNaN(at) || at < 0 || at > 1 {
@@ -84,14 +95,14 @@ func ParseFaults(value string) (Rule, string, error) {
 		}
 		return Rule{}, "off", nil
 	}
-	if countTrue(seen["status"], seen["hang"], seen["reset"]) > 1 {
-		return Rule{}, "", errors.New("status, hang, and reset each end the request; use only one")
+	if countTrue(seen["status"], seen["hang"], seen["reset"], seen["redirect"]) > 1 {
+		return Rule{}, "", errors.New("status, hang, reset, and redirect each end the request; use only one")
 	}
 	return rule, describeFaults(rule), nil
 }
 
 func describeFaults(rule Rule) string {
-	parts := make([]string, 0, 6)
+	parts := make([]string, 0, 7)
 	if rule.Latency != nil {
 		parts = append(parts, "latency="+rule.Latency.Value.String())
 	}
@@ -100,6 +111,9 @@ func describeFaults(rule Rule) string {
 	}
 	if rule.Status != nil {
 		parts = append(parts, "status="+strconv.Itoa(rule.Status.Code))
+	}
+	if rule.Redirect != nil {
+		parts = append(parts, "redirect="+strconv.Itoa(rule.Redirect.Code)+":"+rule.Redirect.Location)
 	}
 	if rule.Hang != nil {
 		parts = append(parts, "hang")
