@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -24,6 +25,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("invalid arguments: %v", err)
 	}
+	if opts.showVersion {
+		fmt.Println(versionString())
+		return
+	}
+	if opts.listProfiles {
+		printProfiles(os.Stdout)
+		return
+	}
+	log.Printf("chaosproxy %s", versionString())
 
 	cfg, err := resolveConfig(&opts)
 	if err != nil {
@@ -107,6 +117,7 @@ func main() {
 	if opts.reportPath != "" {
 		current := handler.CurrentConfig()
 		runReport := recorder.Report(time.Now(), report.Run{
+			Version:   versionString(),
 			Target:    current.Target,
 			Seed:      current.Seed,
 			StoppedBy: stopReason(stopRun, runErr),

@@ -32,6 +32,14 @@ jobs:
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
       - name: dashboard tests
         run: node --test web/feed.test.js
+      - name: npm wrapper tests
+        run: node --test npm/lib/install.test.js
+      - name: goreleaser check
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: check
 
   test:
     strategy:

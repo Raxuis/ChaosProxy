@@ -1,0 +1,8 @@
+rules:
+  - name: connection-drops
+    match: /**
+    reset:
+      probability: 0.05
+    truncate:
+      probability: 0.1
+      at: 0.5

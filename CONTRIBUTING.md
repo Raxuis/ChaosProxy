@@ -52,6 +52,22 @@ node --test web/feed.test.js
 - Keep each pull request focused on one change and describe how you tested it.
 - Update the README when a flag, configuration field or endpoint changes.
 
+## Releasing
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`. GoReleaser builds Linux,
+macOS, and Windows binaries for amd64 and arm64, publishes the GitHub release with
+`checksums.txt`, and updates the Homebrew cask in `Raxuis/homebrew-tap`. The npm
+job then publishes `chaosproxy` with the same version and provenance.
+
+A release needs the `Raxuis/homebrew-tap` repository, a `HOMEBREW_TAP_TOKEN`
+secret allowed to push to it, and npm trusted publishing configured for this
+repository and workflow. Check the configuration locally without publishing:
+
+```sh
+go run github.com/goreleaser/goreleaser/v2@v2.18.2 check
+go run github.com/goreleaser/goreleaser/v2@v2.18.2 release --snapshot --clean
+```
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the

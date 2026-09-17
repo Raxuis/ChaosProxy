@@ -31,6 +31,11 @@ func Load(path string) (*Config, error) {
 	return parsed, nil
 }
 
+// Parse decodes one YAML configuration document without validating it.
+func Parse(contents []byte) (*Config, error) {
+	return decode(contents)
+}
+
 // SeedConfigured reports whether the loaded YAML sets seed explicitly, even to zero.
 func (c *Config) SeedConfigured() bool {
 	_, found := c.source.fields["seed"]

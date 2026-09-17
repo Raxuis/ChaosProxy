@@ -1,0 +1,35 @@
+{
+  "name": "chaosproxy",
+  "version": "0.0.0",
+  "description": "HTTP-aware chaos proxy for frontend developers: per-route latency, errors, truncation and payload mutations, reproducible in CI.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "chaosproxy": "bin/chaosproxy.js"
+  },
+  "files": [
+    "bin",
+    "lib/install.js"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test lib/install.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Raxuis/ChaosProxy.git",
+    "directory": "npm"
+  },
+  "homepage": "https://github.com/Raxuis/ChaosProxy#readme",
+  "bugs": "https://github.com/Raxuis/ChaosProxy/issues",
+  "keywords": [
+    "chaos-engineering",
+    "fault-injection",
+    "proxy",
+    "testing",
+    "playwright",
+    "ci"
+  ]
+}

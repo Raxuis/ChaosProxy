@@ -30,8 +30,8 @@ Every task follows this state machine:
 | 09 | 3 | Determinism and header override | `completed` | [task-09-determinism-and-override.md](docs/progress/task-09-determinism-and-override.md) |
 | 10 | 3 | Scenario mode | `completed` | [task-10-scenario-mode.md](docs/progress/task-10-scenario-mode.md) |
 | 11 | 3 | JSON payload mutation | `completed` | [task-11-payload-mutation.md](docs/progress/task-11-payload-mutation.md) |
-| 12 | 3 | CI integrations and reports | `awaiting_validation` | [task-12-ci-integrations.md](docs/progress/task-12-ci-integrations.md) |
-| 13 | 4 | Packaging and distribution | `pending` | [task-13-packaging.md](docs/progress/task-13-packaging.md) |
+| 12 | 3 | CI integrations and reports | `completed` | [task-12-ci-integrations.md](docs/progress/task-12-ci-integrations.md) |
+| 13 | 4 | Packaging and distribution | `awaiting_validation` | [task-13-packaging.md](docs/progress/task-13-packaging.md) |
 | 14 | 4 | Final README | `pending` | [task-14-final-readme.md](docs/progress/task-14-final-readme.md) |
 | 15 | Launch | Demonstration and launch | `pending` | [task-15-launch.md](docs/progress/task-15-launch.md) |
 | R1 | Review | Code quality and open-source readiness | `completed` | [task-R1-open-source-review.md](docs/progress/task-R1-open-source-review.md) |

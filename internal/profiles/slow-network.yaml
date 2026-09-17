@@ -1,0 +1,9 @@
+rules:
+  - name: slow-network
+    match: /**
+    latency:
+      dist: lognormal
+      p50: 400ms
+      p99: 3s
+    bandwidth:
+      bytes_per_second: 131072

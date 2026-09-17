@@ -1,0 +1,11 @@
+rules:
+  - name: broken-payloads
+    match: /**
+    mutate:
+      probability: 0.25
+      operations:
+        - op: nullify
+          path: "*.*"
+    truncate:
+      probability: 0.05
+      at: 0.5

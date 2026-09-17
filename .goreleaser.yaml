@@ -1,0 +1,61 @@
+version: 2
+
+project_name: chaosproxy
+
+builds:
+  - id: chaosproxy
+    main: ./cmd/chaosproxy
+    binary: chaosproxy
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: chaosproxy
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs"
+      - "^test"
+      - "^chore"
+
+homebrew_casks:
+  - name: chaosproxy
+    repository:
+      owner: Raxuis
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/Raxuis/ChaosProxy
+    description: HTTP-aware chaos proxy for frontend developers
+    license: MIT
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/chaosproxy"]
+          end
+
+release:
+  github:
+    owner: Raxuis
+    name: ChaosProxy

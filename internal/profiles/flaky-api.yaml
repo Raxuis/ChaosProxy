@@ -1,0 +1,11 @@
+rules:
+  - name: flaky-api
+    match: /**
+    latency:
+      dist: fixed
+      value: 150ms
+      jitter: 100ms
+    status:
+      code: 503
+      probability: 0.1
+      retry_after: 2

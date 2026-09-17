@@ -1,0 +1,7 @@
+rules:
+  - name: outage
+    match: /**
+    status:
+      code: 503
+      probability: 1
+      retry_after: 30

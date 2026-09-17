@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/Raxuis/chaosproxy/internal/config"
+	"github.com/Raxuis/chaosproxy/internal/profiles"
 )
 
 const (
@@ -29,6 +30,9 @@ type options struct {
 	reportPath      string
 	maxRequests     int
 	exitOnError     bool
+	profile         string
+	listProfiles    bool
+	showVersion     bool
 }
 
 type optionalInt64 struct {
@@ -68,12 +72,24 @@ func parseOptions(args []string, output io.Writer) (options, error) {
 	flags.StringVar(&opts.reportPath, "report", "", "write a JSON run report to PATH on shutdown, or - for standard output")
 	flags.IntVar(&opts.maxRequests, "max-requests", 0, "shut down after this many data-plane requests (0 means no limit)")
 	flags.BoolVar(&opts.exitOnError, "exit-on-error", false, "shut down and exit with status 1 when a request fails inside the proxy")
+	flags.StringVar(&opts.profile, "profile", "", "run a built-in fault profile; requires --target")
+	flags.BoolVar(&opts.listProfiles, "list-profiles", false, "list built-in fault profiles and exit")
+	flags.BoolVar(&opts.showVersion, "version", false, "print the version and exit")
 
 	if err := flags.Parse(args); err != nil {
 		return options{}, err
 	}
 	if flags.NArg() != 0 {
 		return options{}, fmt.Errorf("unexpected positional arguments: %v", flags.Args())
+	}
+	if opts.listProfiles || opts.showVersion {
+		return opts, nil
+	}
+	if opts.profile != "" && opts.configPath != "" {
+		return options{}, errors.New("--profile and --config cannot be combined")
+	}
+	if opts.profile != "" && opts.target == "" {
+		return options{}, errors.New("--profile requires --target")
 	}
 	if opts.configPath == "" && opts.target == "" {
 		return options{}, errors.New("either --config or --target is required")
@@ -98,9 +114,16 @@ func parseOptions(args []string, output io.Writer) (options, error) {
 
 func resolveConfig(opts *options) (*config.Config, error) {
 	var cfg *config.Config
-	if opts.configPath == "" {
+	switch {
+	case opts.profile != "":
+		loaded, err := profiles.Load(opts.profile)
+		if err != nil {
+			return nil, err
+		}
+		cfg = loaded
+	case opts.configPath == "":
 		cfg = &config.Config{CORS: config.CORSPassthrough}
-	} else {
+	default:
 		loaded, err := config.Load(opts.configPath)
 		if err != nil {
 			return nil, err

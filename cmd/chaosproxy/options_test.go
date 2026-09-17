@@ -85,6 +85,61 @@ func TestParseOptionsHeaderOverrides(t *testing.T) {
 	}
 }
 
+func TestParseOptionsProfilesAndVersion(t *testing.T) {
+	t.Parallel()
+
+	valid := [][]string{
+		{"--target", "http://localhost:9000", "--profile", "outage"},
+		{"--list-profiles"},
+		{"--version"},
+	}
+	for _, args := range valid {
+		if _, err := parseOptions(args, io.Discard); err != nil {
+			t.Errorf("parseOptions(%v) unexpected error: %v", args, err)
+		}
+	}
+
+	invalid := map[string][]string{
+		"--profile requires --target":               {"--profile", "outage"},
+		"--profile and --config cannot be combined": {"--config", "chaos.yaml", "--profile", "outage"},
+	}
+	for want, args := range invalid {
+		if _, err := parseOptions(args, io.Discard); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("parseOptions(%v) error = %v, want %q", args, err, want)
+		}
+	}
+}
+
+func TestResolveConfigLoadsProfiles(t *testing.T) {
+	t.Parallel()
+
+	cfg, err := resolveConfig(&options{target: "http://localhost:9000", profile: "flaky-api"})
+	if err != nil {
+		t.Fatalf("resolveConfig() unexpected error: %v", err)
+	}
+	if cfg.Target != "http://localhost:9000" || cfg.Rules[0].Name != "flaky-api" || cfg.Validate() != nil {
+		t.Fatalf("profile config = %+v, want a valid flaky-api configuration", cfg)
+	}
+	if _, err := resolveConfig(&options{target: "http://localhost:9000", profile: "chaos-monkey"}); err == nil || !strings.Contains(err.Error(), `unknown profile "chaos-monkey"`) {
+		t.Fatalf("unknown profile error = %v", err)
+	}
+}
+
+func TestPrintProfilesListsEveryProfile(t *testing.T) {
+	t.Parallel()
+
+	var output strings.Builder
+	printProfiles(&output)
+	for _, name := range []string{"slow-network", "flaky-api", "connection-drops", "broken-payloads", "outage"} {
+		if !strings.Contains(output.String(), name+"  ") {
+			t.Errorf("profile list %q does not contain %s", output.String(), name)
+		}
+	}
+	if versionString() == "" {
+		t.Error("versionString() is empty")
+	}
+}
+
 func TestParseOptionsCIFlags(t *testing.T) {
 	t.Parallel()
 

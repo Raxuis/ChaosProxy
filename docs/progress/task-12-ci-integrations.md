@@ -1,7 +1,7 @@
 # Task 12 — CI integrations and reports
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-16
+- Status: `completed`
+- Approval: granted on 2026-09-17
 - Depends on: task 11
 
 ## Goal
@@ -16,7 +16,7 @@ Make Chaos Proxy easy to run and assert against in automated test suites.
 - [x] Provide a Next.js integration snippet.
 - [x] Provide a runnable GitHub Actions example.
 - [x] Verify copied examples and deterministic same-seed behavior.
-- [ ] Run `go test ./...` and receive explicit user approval for phase 3.
+- [x] Run `go test ./...` and receive explicit user approval for phase 3.
 
 ## Acceptance evidence
 
@@ -50,3 +50,4 @@ Make Chaos Proxy easy to run and assert against in automated test suites.
 | Date | Note |
 |---|---|
 | 2026-09-16 | CI flags, run report, and integration examples implemented and verified; approval for task 12 and phase 3 requested. |
+| 2026-09-17 | User approved task 12 and phase 3. |

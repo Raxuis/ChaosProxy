@@ -60,6 +60,9 @@ Available flags:
 --report PATH  write a JSON run report on shutdown (- for standard output)
 --max-requests N  shut down after N data-plane requests
 --exit-on-error  shut down and exit 1 when a request fails inside the proxy
+--profile NAME  run a built-in fault profile; requires --target
+--list-profiles  list built-in fault profiles and exit
+--version      print the version and exit
 ```
 
 At least one of `--config` or `--target` is required.
@@ -88,6 +91,26 @@ configuration reloads until the file changes that rule's `enabled` value or
 removes the rule.
 
 Press Ctrl+C to stop the server gracefully.
+
+## Profiles
+
+Built-in profiles apply one failure mode to every route, with no configuration
+file:
+
+```sh
+chaosproxy --target http://localhost:9000 --profile flaky-api
+```
+
+| Profile | Faults |
+|---|---|
+| `slow-network` | lognormal latency (p50 400ms, p99 3s) and 128 KB/s bandwidth |
+| `flaky-api` | 150ms ±100ms latency and 10% 503 responses with `Retry-After: 2` |
+| `connection-drops` | 5% TCP resets and 10% of bodies truncated at half |
+| `broken-payloads` | 25% of JSON bodies with nested fields set to `null`, 5% truncated |
+| `outage` | every request fails with 503 and `Retry-After: 30` |
+
+`--list-profiles` prints the same list. Profiles cannot be combined with
+`--config`; copy a profile into a YAML file to customize it.
 
 ## Truncation
 

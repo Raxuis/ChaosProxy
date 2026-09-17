@@ -25,6 +25,7 @@ type Options struct {
 
 // Run describes the proxy state that events do not carry.
 type Run struct {
+	Version   string
 	Target    string
 	Seed      int64
 	StoppedBy string
@@ -37,6 +38,7 @@ type Report struct {
 	FinishedAt time.Time                   `json:"finished_at"`
 	DurationMs int64                       `json:"duration_ms"`
 	StoppedBy  string                      `json:"stopped_by"`
+	Version    string                      `json:"version"`
 	Target     string                      `json:"target"`
 	Seed       int64                       `json:"seed"`
 	Totals     Totals                      `json:"totals"`
@@ -132,6 +134,7 @@ func (r *Recorder) Report(finished time.Time, run Run) Report {
 		FinishedAt: finished.UTC(),
 		DurationMs: finished.Sub(r.started).Milliseconds(),
 		StoppedBy:  run.StoppedBy,
+		Version:    run.Version,
 		Target:     run.Target,
 		Seed:       run.Seed,
 		Totals: Totals{
