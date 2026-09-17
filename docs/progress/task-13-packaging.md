@@ -1,7 +1,7 @@
 # Task 13 — Packaging and distribution
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-17 (nothing published)
+- Status: `completed`
+- Approval: granted on 2026-09-17 for the packaging work; publication not yet approved
 - Depends on: task 12
 
 ## Goal
@@ -61,3 +61,4 @@ Ship binaries, an npm wrapper, a container image, and embedded failure profiles.
 |---|---|
 | 2026-09-15 | Container image deferred until users request it; the five profiles were never specified and will be proposed at task start. |
 | 2026-09-17 | Profiles, GoReleaser, npm wrapper, and release workflow implemented and verified locally without publishing; approval requested. |
+| 2026-09-17 | User approved task 13; real publication still requires separate approval. |
