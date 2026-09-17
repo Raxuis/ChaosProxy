@@ -1,0 +1,26 @@
+target: http://localhost:9000
+seed: 7
+
+rules:
+  - name: one-null-article
+    match: GET /api/articles
+    enabled: false
+    mutate:
+      probability: 1
+      operations:
+        - op: nullify
+          path: articles.1
+
+  - name: slow-feed
+    match: GET /api/articles
+    latency:
+      dist: lognormal
+      p50: 120ms
+      p99: 600ms
+
+  - name: tags-down
+    match: GET /api/tags
+    enabled: false
+    status:
+      code: 503
+      probability: 1

@@ -112,6 +112,9 @@ func TestHandlerAppliesStatusFaultBeforeUpstream(t *testing.T) {
 	if response.Header().Get("Access-Control-Allow-Origin") != "http://localhost:3001" {
 		t.Errorf("synthetic response did not reflect Origin")
 	}
+	if !strings.Contains(strings.Join(response.Header().Values("Access-Control-Expose-Headers"), ","), "Retry-After") {
+		t.Errorf("Access-Control-Expose-Headers = %q, want Retry-After", response.Header().Values("Access-Control-Expose-Headers"))
+	}
 	if !strings.Contains(response.Body.String(), `"rule":"unavailable"`) {
 		t.Errorf("body = %q, want applied rule", response.Body.String())
 	}

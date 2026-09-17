@@ -238,6 +238,9 @@ func writeShortCircuit(
 ) {
 	copyHeaders(w.Header(), shortCircuit.Headers)
 	applyResponseCORS(w.Header(), r, cors)
+	if w.Header().Get("Access-Control-Allow-Origin") != "" && w.Header().Get("Retry-After") != "" {
+		w.Header().Add("Access-Control-Expose-Headers", "Retry-After")
+	}
 	status := shortCircuit.Status
 	if status == 0 {
 		status = http.StatusInternalServerError

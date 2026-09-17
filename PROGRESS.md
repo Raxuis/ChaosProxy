@@ -32,10 +32,13 @@ Every task follows this state machine:
 | 11 | 3 | JSON payload mutation | `completed` | [task-11-payload-mutation.md](docs/progress/task-11-payload-mutation.md) |
 | 12 | 3 | CI integrations and reports | `completed` | [task-12-ci-integrations.md](docs/progress/task-12-ci-integrations.md) |
 | 13 | 4 | Packaging and distribution | `completed` | [task-13-packaging.md](docs/progress/task-13-packaging.md) |
-| 14 | 4 | Final README | `awaiting_validation` | [task-14-final-readme.md](docs/progress/task-14-final-readme.md) |
-| 15 | Launch | Demonstration and launch | `pending` | [task-15-launch.md](docs/progress/task-15-launch.md) |
+| 14 | 4 | Final README | `completed` | [task-14-final-readme.md](docs/progress/task-14-final-readme.md) |
+| 15 | Launch | Demonstration and launch preparation | `awaiting_validation` | [task-15-launch.md](docs/progress/task-15-launch.md) |
+| 16 | Release | Release and publication | `pending` | [task-16-release.md](docs/progress/task-16-release.md) |
 | R1 | Review | Code quality and open-source readiness | `completed` | [task-R1-open-source-review.md](docs/progress/task-R1-open-source-review.md) |
 
 ## Phase acceptance checks
 
 Phase-level checks are recorded in the final task of each phase. Checks involving a real frontend, a clean installation, publication, or a third-party service require manual approval and evidence.
+
+Nothing is deployed or published before every other task is completed. Everything that pushes, publishes, or touches a third-party service is grouped in task 16.

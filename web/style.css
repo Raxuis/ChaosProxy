@@ -314,7 +314,7 @@ main {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(300px, 400px) minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
   gap: 28px;
   align-items: start;
 }
@@ -525,7 +525,7 @@ td {
 .feed .path {
   min-width: 18ch;
   white-space: normal;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .feed .rule {
@@ -598,6 +598,12 @@ td {
 @keyframes blink {
   50% {
     opacity: 0.25;
+  }
+}
+
+@media (max-width: 1280px) {
+  .feed .bytes {
+    display: none;
   }
 }
 

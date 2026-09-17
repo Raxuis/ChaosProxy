@@ -398,6 +398,7 @@ function buildRow(event) {
   const kind = statusClass(event.status);
   row.append(
     textElement("td", "time", formatTime(event.timestamp)),
+    textElement("td", `status s-${kind}`, kind === "aborted" ? "abort" : String(event.status)),
     textElement("td", "method", event.method),
     textElement("td", "path", event.path),
     textElement("td", "rule", event.rule ?? ""),
@@ -411,18 +412,14 @@ function buildRow(event) {
     faults.title = event.details.join("\n");
   }
 
-  const latency = textElement("td", "latency num", "");
-  if (event.injected_latency_ms > 0) {
-    latency.append(textElement("span", "inj", `+${event.injected_latency_ms} `));
-  }
-  latency.append(`${event.upstream_latency_ms} ms`);
+  const latency = textElement("td", "latency num", `${event.duration_ms} ms`);
+  latency.classList.toggle("inj", event.injected_latency_ms > 0);
   latency.title = `injected ${event.injected_latency_ms} ms, upstream ${event.upstream_latency_ms} ms`;
 
   row.append(
     faults,
     latency,
     textElement("td", "bytes num", formatBytes(event.bytes)),
-    textElement("td", `status num s-${kind}`, kind === "aborted" ? "abort" : String(event.status)),
   );
   return row;
 }

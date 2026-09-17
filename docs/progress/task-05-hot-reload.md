@@ -16,7 +16,7 @@ Reload valid YAML atomically while preserving the last known-good configuration.
 - [x] Log readable added, removed, and modified rule diffs.
 - [x] Prove in-flight requests retain their captured config.
 - [x] Add temporary-file integration tests and run `go test ./...`.
-- [ ] Manually verify immediate edits and clear invalid-YAML errors.
+- [x] Manually verify immediate edits and clear invalid-YAML errors.
 - [x] Receive explicit user approval for phase 1.
 
 ## Acceptance evidence
@@ -53,3 +53,4 @@ validation.
 | 2026-09-10 | Hot reload and automated verification completed; approval requested. |
 | 2026-09-10 | User approved task 05 and phase 1 by asking to continue. |
 | 2026-09-15 | Review R1: reloads keep rule toggles and use compare-and-swap (`660d87f`). The manual editor check is still pending. |
+| 2026-09-17 | Manual check closed in task 15: in-place writes, atomic rename saves, `sed -i`, and Vim saves each reloaded within a second; an invalid code was rejected with its line and the last configuration kept serving. |

@@ -15,7 +15,7 @@ Ship binaries, an npm wrapper, a container image, and embedded failure profiles.
 - [x] Add tag-driven release and npm publication automation.
 - [x] Define, embed, and document five failure profiles, proposed for approval at task start.
 - [x] Verify packaging locally without publishing external artifacts.
-- [ ] Receive explicit user approval before any real publication.
+- [x] Real publication moved to [task 16](task-16-release.md).
 
 ## Deferred on demand
 

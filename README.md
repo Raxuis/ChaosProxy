@@ -2,7 +2,7 @@
 
 A HTTP-aware chaos proxy for frontend developers — configure latency, errors, truncation and payload mutations per route, in code, reproducibly, in CI.
 
-<!-- Demo GIF: docs/assets/demo.gif, recorded at launch. -->
+![Chaos Proxy nulls one article in a real Vue app's API response, and the whole feed never finishes loading](docs/assets/demo.gif)
 
 ```sh
 npx chaosproxy --target http://localhost:9000 --profile flaky-api
@@ -162,6 +162,9 @@ from `0` to `1`. An injected `status` response looks like this:
 ```json
 {"error":"injected by chaosproxy","rule":"flaky-orders"}
 ```
+
+With `cors: reflect`, injected responses expose `Retry-After` to browser code, so
+cross-origin frontends can test their backoff.
 
 ### Latency
 

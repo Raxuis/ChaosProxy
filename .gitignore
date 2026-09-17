@@ -5,6 +5,9 @@
 *.test
 *.out
 
+# Dependencies
+node_modules/
+
 # Test and runtime artifacts
 /coverage/
 /reports/

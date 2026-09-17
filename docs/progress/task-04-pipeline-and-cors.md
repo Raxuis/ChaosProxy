@@ -16,7 +16,7 @@ Wire rule matching and faults into the reverse proxy while preserving browser-vi
 - [x] Handle preflights and add CORS headers to synthetic responses.
 - [x] Wire `--config`, `--target`, `--port`, and `--seed` into the CLI.
 - [x] Add end-to-end `httptest` coverage for passthrough and each fault.
-- [ ] Verify injected 503 responses remain visible as 503 in a browser frontend.
+- [x] Verify injected 503 responses remain visible as 503 in a browser frontend.
 - [x] Run `go test ./...`.
 - [x] Receive explicit user approval.
 
@@ -51,3 +51,4 @@ The real-browser check remains intentionally manual and is not marked complete.
 | 2026-09-10 | Pipeline, CLI, CORS modes, streaming, and integration tests completed; approval requested. |
 | 2026-09-10 | User approved task 04 by asking to continue. |
 | 2026-09-15 | Review R1: shutdown releases injected waits (`a37789e`); CORS origins restricted and `--host` added (`8e4a7b3`); per-rule decision sequences (`7ea4a75`, `6102aaf`). Evidence updated to the current behavior; the browser check is still pending. |
+| 2026-09-17 | Manual check closed in task 15: Chrome on the Conduit frontend read the injected 503 and its JSON body cross-origin; it also showed `Retry-After` was hidden from browser code, now exposed. |

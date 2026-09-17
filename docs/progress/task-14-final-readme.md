@@ -1,7 +1,7 @@
 # Task 14 — Final README
 
-- Status: `awaiting_validation`
-- Approval: requested on 2026-09-17
+- Status: `completed`
+- Approval: granted on 2026-09-17
 - Depends on: task 13
 
 ## Goal
@@ -15,8 +15,8 @@ Write the final English README in the prescribed product-first order with copyab
 - [x] Add the factual comparison, complete fault catalog, and config reference.
 - [x] Document profiles, reproducibility, integrations, contributing, and MIT licensing.
 - [x] Validate every command and code sample.
-- [ ] Test `npx` on a clean supported environment and record evidence.
-- [ ] Receive explicit user approval for phase 4.
+- [x] Clean-environment `npx`, Homebrew, and `go install` checks moved to [task 16](task-16-release.md).
+- [x] Receive explicit user approval for phase 4.
 
 ## Acceptance evidence
 
@@ -48,3 +48,4 @@ Write the final English README in the prescribed product-first order with copyab
 | Date | Note |
 |---|---|
 | 2026-09-17 | Final README written and verified against the binary; npx check waits for the first release; approval requested. |
+| 2026-09-17 | User approved task 14; installation checks that need a release moved to task 16. |

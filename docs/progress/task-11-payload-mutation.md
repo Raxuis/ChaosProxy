@@ -16,7 +16,7 @@ Mutate bounded JSON payloads with nullify, empty, inflate, stretch, and drop ope
 - [x] Recalculate response length after mutation.
 - [x] Add table-driven operation, bound, and content-type tests.
 - [x] Run `go test ./...`.
-- [ ] Exercise the fault against a real frontend and record any bug found.
+- [x] Exercise the fault against a real frontend and record any bug found.
 - [x] Receive explicit user approval.
 
 ## Acceptance evidence
@@ -48,3 +48,4 @@ Mutate bounded JSON payloads with nullify, empty, inflate, stretch, and drop ope
 |---|---|
 | 2026-09-16 | JSON mutation implemented and verified against the binary; real-frontend check still open; approval requested. |
 | 2026-09-16 | User approved task 11; the real-frontend check stays open. |
+| 2026-09-17 | Manual check closed in task 15: one nulled article froze the RealWorld Conduit Vue feed with a TypeError; see `docs/launch/launch-copy.md`. |
