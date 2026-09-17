@@ -124,6 +124,8 @@ against `checksums.txt`, and put `chaosproxy` on your `PATH`:
 shasum -a 256 --check --ignore-missing checksums.txt
 ```
 
+Each release also ships an SPDX SBOM (`.sbom.json`) per archive.
+
 ## Usage
 
 ```text
