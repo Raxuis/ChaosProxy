@@ -53,7 +53,7 @@ jobs:
       - name: Check published version
         id: published
         run: |
-          if npm view "chaosproxy@${GITHUB_REF_NAME#v}" version >/dev/null 2>&1; then
+          if npm view "@raxuis/chaosproxy@${GITHUB_REF_NAME#v}" version >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           fi
       - name: Publish with provenance

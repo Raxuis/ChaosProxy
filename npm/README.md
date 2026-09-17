@@ -1,10 +1,10 @@
-# chaosproxy
+# @raxuis/chaosproxy
 
 An HTTP-aware chaos proxy for frontend developers: configure latency, errors,
 truncation and payload mutations per route, reproducibly, in CI.
 
 ```sh
-npx chaosproxy --target http://localhost:9000 --profile flaky-api
+npx @raxuis/chaosproxy --target http://localhost:9000 --profile flaky-api
 ```
 
 Point your frontend at `http://localhost:7070` and open the dashboard on

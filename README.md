@@ -5,7 +5,7 @@ A HTTP-aware chaos proxy for frontend developers — configure latency, errors, 
 ![Chaos Proxy nulls one article in a real Vue app's API response, and the whole feed never finishes loading](docs/assets/demo.gif)
 
 ```sh
-npx chaosproxy --target http://localhost:9000 --profile flaky-api
+npx @raxuis/chaosproxy --target http://localhost:9000 --profile flaky-api
 # point the frontend's API base URL at http://localhost:7070
 # watch every request on the dashboard at http://localhost:7071
 ```
@@ -44,27 +44,28 @@ whose `email` is suddenly `null`.
 
 How it compares with tools frontend developers already use:
 
-| | Chaos Proxy | Toxiproxy | MSW | mitmproxy | Browser DevTools |
-|---|---|---|---|---|---|
-| Works at | HTTP reverse proxy | TCP proxy | request interception in the browser or Node.js | HTTP(S) intercepting proxy | the browser tab |
-| Traffic | the real API | the real service | mocked handlers, optional passthrough | the real server | the real server |
-| Targets | method and path globs | a whole proxied port | handlers you write | Python addons you write | URL patterns, whole tab for throttling |
-| Faults | latency, status, hang, reset, truncation, bandwidth, JSON mutation | latency, bandwidth, timeouts, resets, slicing, data limits | anything you code | anything you code | throttling, blocking, local overrides |
-| Repeatable runs | seeds and step-by-step scenarios | probabilistic toxicity | deterministic code | deterministic code | manual |
-| Covers server-side fetches | yes | yes | Node.js only, in process | yes, when configured as proxy | no |
+| | Chaos Proxy | [chaos-proxy](https://github.com/gkoos/chaos-proxy) (npm) | Toxiproxy | MSW | mitmproxy | Browser DevTools |
+|---|---|---|---|---|---|---|
+| Works at | HTTP reverse proxy, single Go binary | HTTP proxy on Koa, Node.js CLI and library | TCP proxy | request interception in the browser or Node.js | HTTP(S) intercepting proxy | the browser tab |
+| Traffic | the real API | the real API | the real service | mocked handlers, optional passthrough | the real server | the real server |
+| Targets | method and path globs | method and Koa Router paths, plus global middleware | a whole proxied port | handlers you write | Python addons you write | URL patterns, whole tab for throttling |
+| Faults | latency, status, hang, reset, truncation, bandwidth, JSON mutation | latency, failures, every-nth failures, dropped connections, rate limiting, throttling, custom middleware | latency, bandwidth, timeouts, resets, slicing, data limits | anything you code | anything you code | throttling, blocking, local overrides |
+| Repeatable runs | seeds and step-by-step scenarios | every-nth failures | probabilistic toxicity | deterministic code | deterministic code | manual |
+| Covers server-side fetches | yes | yes | yes | Node.js only, in process | yes, when configured as proxy | no |
 
-Choose Toxiproxy for databases and other non-HTTP services, MSW when there is
-no backend yet, and mitmproxy to inspect or script arbitrary traffic. Choose
-Chaos Proxy to exercise a real HTTP API's failure modes per route, without
-writing interception code.
+Choose chaos-proxy for rate limiting or custom Node.js middleware, Toxiproxy for
+databases and other non-HTTP services, MSW when there is no backend yet, and
+mitmproxy to inspect or script arbitrary traffic. Choose Chaos Proxy to replay
+the same HTTP failures, truncated bodies, and broken JSON payloads per route,
+run after run, without writing interception code.
 
 ## Install
 
 Release artifacts are published from the first tagged version.
 
 ```sh
-npx chaosproxy --version                                  # npm, Node.js 20+
-brew install --cask raxuis/tap/chaosproxy                 # Homebrew on macOS
+npx @raxuis/chaosproxy --version                               # npm, Node.js 20+
+brew install --cask raxuis/tap/chaosproxy                      # Homebrew on macOS
 go install github.com/Raxuis/chaosproxy/cmd/chaosproxy@latest  # Go 1.25+
 ```
 

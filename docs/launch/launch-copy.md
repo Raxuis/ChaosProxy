@@ -49,7 +49,7 @@ Differences from tools I used before: Toxiproxy works at TCP level, so it cannot
 target a route or a status code; MSW mocks responses instead of talking to the
 real API; DevTools throttling is manual and per tab.
 
-npx chaosproxy --target http://localhost:9000 --profile flaky-api
+npx @raxuis/chaosproxy --target http://localhost:9000 --profile flaky-api
 
 MIT, feedback on the fault catalog welcome: https://github.com/Raxuis/ChaosProxy
 
@@ -82,7 +82,7 @@ through `SO_LINGER=0` on hijacked connections, and an embedded dashboard with
    JSON mutations. Reproducible with a seed. [GIF]
 2. On RealWorld Conduit, one null article in a 200 response leaves the feed on
    "Loading articles..." forever. No error, no retry.
-3. `npx chaosproxy --target http://localhost:9000 --profile broken-payloads`
+3. `npx @raxuis/chaosproxy --target http://localhost:9000 --profile broken-payloads`
 4. Built for CI: JSON run report, exit code, Playwright fixture, scenarios like
    "fail twice, then succeed". MIT: https://github.com/Raxuis/ChaosProxy
 

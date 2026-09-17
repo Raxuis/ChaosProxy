@@ -57,7 +57,7 @@ node --test web/feed.test.js
 Pushing a `v*` tag runs `.github/workflows/release.yml`. GoReleaser builds Linux,
 macOS, and Windows binaries for amd64 and arm64, publishes the GitHub release with
 `checksums.txt`, and updates the Homebrew cask in `Raxuis/homebrew-tap`. The npm
-job then publishes `chaosproxy` with the same version and provenance.
+job then publishes `@raxuis/chaosproxy` with the same version and provenance.
 
 A release needs the `Raxuis/homebrew-tap` repository, a `HOMEBREW_TAP_TOKEN`
 secret allowed to push to it, and npm trusted publishing configured for this

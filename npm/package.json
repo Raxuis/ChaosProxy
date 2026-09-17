@@ -1,5 +1,5 @@
 {
-  "name": "chaosproxy",
+  "name": "@raxuis/chaosproxy",
   "version": "0.0.0",
   "description": "HTTP-aware chaos proxy for frontend developers: per-route latency, errors, truncation and payload mutations, reproducible in CI.",
   "license": "MIT",
