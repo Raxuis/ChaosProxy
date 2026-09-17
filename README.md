@@ -49,7 +49,7 @@ How it compares with tools frontend developers already use:
 | Works at | HTTP reverse proxy, single Go binary | HTTP proxy on Koa, Node.js CLI and library | TCP proxy | request interception in the browser or Node.js | HTTP(S) intercepting proxy | the browser tab |
 | Traffic | the real API | the real API | the real service | mocked handlers, optional passthrough | the real server | the real server |
 | Targets | method and path globs | method and Koa Router paths, plus global middleware | a whole proxied port | handlers you write | Python addons you write | URL patterns, whole tab for throttling |
-| Faults | latency, status, hang, reset, headers, truncation, bandwidth, JSON mutation | latency, failures, every-nth failures, dropped connections, rate limiting, throttling, custom middleware | latency, bandwidth, timeouts, resets, slicing, data limits | anything you code | anything you code | throttling, blocking, local overrides |
+| Faults | latency, status, hang, reset, headers, truncation, stall, bandwidth, JSON mutation | latency, failures, every-nth failures, dropped connections, rate limiting, throttling, custom middleware | latency, bandwidth, timeouts, resets, slicing, data limits | anything you code | anything you code | throttling, blocking, local overrides |
 | Repeatable runs | seeds and step-by-step scenarios | every-nth failures | probabilistic toxicity | deterministic code | deterministic code | manual |
 | Covers server-side fetches | yes | yes | yes | Node.js only, in process | yes, when configured as proxy | no |
 
@@ -193,7 +193,8 @@ faults run in this order:
 | 5 | `mutate` | `probability`, `max_bytes`, `operations` | a JSON body with changed fields |
 | 6 | `headers` | `probability`, `set`, `remove` | response headers added, overridden, or removed from the upstream response |
 | 7 | `truncate` | `probability`, `at` (0–1) | a body cut at `at`, then a network error |
-| 8 | `bandwidth` | `bytes_per_second` | the body delivered at that rate, on every matching request |
+| 8 | `stall` | `probability`, `after_bytes`, `duration` | the response body paused mid-stream after initial bytes |
+| 9 | `bandwidth` | `bytes_per_second` | the body delivered at that rate, on every matching request |
 
 Durations use Go syntax such as `250ms`, `1.5s`, or `2m`. Probabilities range
 from `0` to `1`. An injected `status` response looks like this:
@@ -313,6 +314,24 @@ rules:
       bytes_per_second: 32768
 ```
 
+### Stall
+
+`stall` delivers the first `after_bytes` of the body immediately, then pauses
+mid-stream for `duration` before delivering the rest:
+
+```yaml
+rules:
+  - name: stalling-download
+    match: GET /downloads/*
+    stall:
+      probability: 0.2
+      after_bytes: 4096
+      duration: 5s
+```
+
+The response body is wrapped without buffering and preserves `Content-Length`. The
+pause aborts cleanly if the client disconnects or the proxy shuts down.
+
 ## Configuration reference
 
 ### Top level
@@ -336,7 +355,7 @@ removes every `Access-Control-*` response header.
 | `name` | | unique name, used in logs, events, reports, and the control API |
 | `match` | | route expression |
 | `enabled` | `true` | disabled rules never match |
-| `latency`, `reset`, `status`, `hang`, `mutate`, `headers`, `truncate`, `bandwidth` | | at least one fault from the [catalog](#fault-catalog) |
+| `latency`, `reset`, `status`, `hang`, `mutate`, `headers`, `truncate`, `stall`, `bandwidth` | | at least one fault from the [catalog](#fault-catalog) |
 
 The first enabled rule whose expression matches handles the request; later rules
 are ignored for it.

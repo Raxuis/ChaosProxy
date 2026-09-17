@@ -59,6 +59,13 @@ rules:
     bandwidth:
       bytes_per_second: 32768
 
+  - name: stalling-download
+    match: GET /downloads/*
+    stall:
+      probability: 0.2
+      after_bytes: 4096
+      duration: 5s
+
 scenarios:
   - name: payment-recovers
     match: POST /api/payments

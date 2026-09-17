@@ -88,4 +88,8 @@ test("ruleFaults describes every configured fault", () => {
     ruleFaults({ headers: { probability: 1, set: { "X-Only": "val" } } }),
     ["headers 1 header · 100%"],
   );
+  assert.deepEqual(
+    ruleFaults({ stall: { probability: 0.2, after_bytes: 4096, duration: "5s" } }),
+    ["stall 4 KB 5s · 20%"],
+  );
 });

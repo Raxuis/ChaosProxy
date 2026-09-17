@@ -68,6 +68,10 @@ func cloneRule(rule Rule) Rule {
 		value.Operations = slices.Clone(rule.Mutate.Operations)
 		cloned.Mutate = &value
 	}
+	if rule.Stall != nil {
+		value := *rule.Stall
+		cloned.Stall = &value
+	}
 	return cloned
 }
 

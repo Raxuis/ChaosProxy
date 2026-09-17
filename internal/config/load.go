@@ -94,6 +94,7 @@ func decode(contents []byte) (*Config, error) {
 			Bandwidth: rawRule.Bandwidth,
 			Headers:   rawRule.Headers,
 			Mutate:    rawRule.Mutate,
+			Stall:     rawRule.Stall,
 		}
 		applyMutateDefaults(rawRule.Mutate)
 	}
