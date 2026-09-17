@@ -48,12 +48,12 @@ homebrew_casks:
     homepage: https://github.com/Raxuis/ChaosProxy
     description: HTTP-aware chaos proxy for frontend developers
     license: MIT
-    hooks:
-      post:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/chaosproxy"]
-          end
+    custom_block: |
+      postflight_steps do
+        on_macos do
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{" }}staged_path{{ "}}" }}/chaosproxy"]
+        end
+      end
 
 release:
   github:
