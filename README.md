@@ -61,18 +61,55 @@ run after run, without writing interception code.
 
 ## Install
 
-Release artifacts are published from the first tagged version.
+Chaos Proxy is a single binary for Linux, macOS, and Windows on amd64 and arm64.
+Pick the channel that fits your project.
+
+### npm
+
+Requires Node.js 20 or newer. Run it without installing:
 
 ```sh
-npx @raxuis/chaosproxy --version                               # npm, Node.js 20+
-brew install --cask raxuis/tap/chaosproxy                      # Homebrew on macOS
-go install github.com/Raxuis/chaosproxy/cmd/chaosproxy@latest  # Go 1.25+
+npx @raxuis/chaosproxy --target http://localhost:9000
 ```
 
-The npm package downloads the binary for the current platform from the matching
-[GitHub release](https://github.com/Raxuis/ChaosProxy/releases), verifies its
-SHA-256 checksum, and caches it. Release archives for Linux, macOS, and Windows
-on amd64 and arm64 are also available directly with a `checksums.txt` file.
+Or add it to a frontend project so scripts and CI use a pinned version:
+
+```sh
+npm install --save-dev @raxuis/chaosproxy
+npx chaosproxy --version
+```
+
+On first run the package downloads the binary for the current platform from the
+matching GitHub release, verifies its SHA-256 checksum, and caches it. Set
+`CHAOSPROXY_CACHE_DIR` to change the cache location.
+
+### Homebrew
+
+macOS and Linux:
+
+```sh
+brew install --cask raxuis/tap/chaosproxy
+```
+
+Upgrade with `brew upgrade --cask chaosproxy`.
+
+### Go
+
+Requires Go 1.25 or newer:
+
+```sh
+go install github.com/Raxuis/chaosproxy/cmd/chaosproxy@latest
+```
+
+### Binaries
+
+Download an archive for your platform from the
+[latest release](https://github.com/Raxuis/ChaosProxy/releases/latest), check it
+against `checksums.txt`, and put `chaosproxy` on your `PATH`:
+
+```sh
+shasum -a 256 --check --ignore-missing checksums.txt
+```
 
 ## Usage
 

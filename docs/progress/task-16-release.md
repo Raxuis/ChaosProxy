@@ -16,10 +16,11 @@ pushes, publishes, or touches a third-party service needs explicit user approval
 - [x] Push `main` and make `Raxuis/ChaosProxy` public.
 - [x] Create `Raxuis/homebrew-tap` and the `HOMEBREW_TAP_TOKEN` secret allowed to push to it.
 - [x] Configure npm trusted publishing for `@raxuis/chaosproxy`, after an initial manual publish if npm requires it.
-- [ ] Tag the first version and check the release workflow: GitHub release archives, `checksums.txt`, Homebrew cask, npm package with provenance. (Tag, archives, checksums, and cask verified; npm pending.)
+- [x] Tag the first version and check the release workflow: GitHub release archives, `checksums.txt`, Homebrew cask, npm package with provenance.
 - [x] Test `npx @raxuis/chaosproxy`, `brew install --cask raxuis/tap/chaosproxy`, and `go install github.com/Raxuis/chaosproxy/cmd/chaosproxy@latest` on clean environments and record evidence. Windows archives are verified by checksum only.
-- [ ] Offer the Conduit findings to the `vue-realworld-example-app` maintainers.
-- [ ] Create the good-first-issues drafted in task 15.
+- [x] Offer the Conduit findings to the `vue-realworld-example-app` maintainers.
+- [x] Create the good-first-issues drafted in task 15.
+- [ ] Verify `brew install --cask raxuis/tap/chaosproxy` on Linux (the cask ships Linux archives; not tested yet).
 - [ ] Publish the launch copy drafted in task 15, channel by channel.
 - [ ] Receive final user approval.
 
@@ -63,3 +64,9 @@ pushes, publishes, or touches a third-party service needs explicit user approval
 | 2026-09-17 | Homebrew 7.0.1 check: `brew install --cask raxuis/tap/chaosproxy` installed `0.1.0` (exit 0) but printed four `Calling postflight is deprecated! Use postflight_steps instead` warnings; GoReleaser emits that stanza from `hooks` (upstream issue goreleaser#6870, PR #6873 open). Without any hook the binary kept `com.apple.quarantine` and macOS Gatekeeper blocked it, so the hook is required. |
 | 2026-09-17 | `.goreleaser.yaml` now emits `postflight_steps` with `run "/usr/bin/xattr"` on `{{staged_path}}` through `custom_block`; `goreleaser check` passes and the snapshot cask renders the token literally. The same block in the live `0.1.0` cask installed with no deprecation warning, no quarantine attribute, and a working binary, then uninstalled cleanly. The fix ships with the next tag; the published tap still has the old stanza. Homebrew was restored: tap, cask, trust entry, and binary removed. |
 | 2026-09-17 | Clean Linux check in `node:24-slim` containers (Node 24.21.0): on linux/arm64 and linux/amd64, `npx -y @raxuis/chaosproxy` downloaded the matching archive, printed `0.1.0`, and `--profile outage` answered `503` with `Retry-After: 30`. No Windows machine was available. Docker was restored afterwards. |
+| 2026-09-17 | With approval, `v0.1.1` tagged on `8128934` after its CI passed. Release run `35212341623`: `binaries` and `npm` both succeeded; npm published `@raxuis/chaosproxy@0.1.1` through trusted publishing with a signed provenance statement from GitHub Actions. |
+| 2026-09-17 | Verified `v0.1.1`: seven release assets; the tap cask uses `postflight_steps`; a fresh `brew install --cask raxuis/tap/chaosproxy` installed `0.1.1` with no `postflight` warning and no quarantine attribute (Homebrew restored afterwards); npm lists `0.1.0` and `0.1.1` with `latest` = `0.1.1` and an SLSA v1 provenance attestation; `npx -y @raxuis/chaosproxy@0.1.1` in an empty `HOME` downloaded the darwin/arm64 archive and printed `0.1.1`. |
+| 2026-09-17 | With approval, opened [realworld-apps/vue-realworld-example-app#603](https://github.com/realworld-apps/vue-realworld-example-app/issues/603) (the repository moved from `gothinkster`); a search found no existing issue for the stuck feed or null items, only #175 about POST error handling. |
+| 2026-09-17 | With approval, created good first issues #2 `headers`, #3 `redirect`, and #4 `stall` with the `good first issue` and `enhancement` labels. A zsh array indexing mistake first attached the wrong bodies to #2 and #3; both were corrected and #4 created, and each body was checked against its title. |
+| 2026-09-17 | At the user's request the README install section now documents each channel: `npx` and a pinned `--save-dev` install, Homebrew on macOS, `go install`, and release archives with a `shasum --check --ignore-missing` example. In an empty `HOME`, `npm install --save-dev @raxuis/chaosproxy` recorded `^0.1.1` and `npx chaosproxy --version` printed `0.1.1`; the checksum command verified the darwin/arm64 archive. Homebrew on Linux was first left out because it was not tested. The launch drafts now link issue #603 and explain the `chaos-proxy` name collision. |
+| 2026-09-17 | At the user's request the README lists Homebrew for macOS and Linux. The Linux check in the `homebrew/brew` image never ran (the Docker daemon was still starting) and was stopped so the user could use Docker; it stays open as a checklist item. |

@@ -22,7 +22,20 @@ against its Go/Gin API, behind Chaos Proxy:
   feed still loads.
 
 Keep every claim to what the demo shows. Do not call Conduit badly written: it
-is a learning project, and most frontends share these gaps.
+is a learning project, and most frontends share these gaps. The findings were
+reported upstream as
+[realworld-apps/vue-realworld-example-app#603](https://github.com/realworld-apps/vue-realworld-example-app/issues/603).
+
+## Name collision
+
+[gkoos/chaos-proxy](https://github.com/gkoos/chaos-proxy), published on npm as
+`chaos-proxy`, is also titled "Chaos Proxy": a Koa-based Node.js proxy and
+library with route middleware, random and every-nth failures, dropped
+connections, rate limiting, and throttling. npm refused the unscoped name for
+that reason, so this project ships as `@raxuis/chaosproxy`. Expect the question
+in comments and answer factually: a single Go binary, seeded replay and
+scenarios, declarative JSON mutations, truncation and TCP resets, a live
+dashboard, and a CI run report. Never disparage the other project.
 
 ## Show HN
 
@@ -47,7 +60,9 @@ message. The GIF in the README shows it.
 
 Differences from tools I used before: Toxiproxy works at TCP level, so it cannot
 target a route or a status code; MSW mocks responses instead of talking to the
-real API; DevTools throttling is manual and per tab.
+real API; DevTools throttling is manual and per tab. The npm `chaos-proxy`
+package is a similar Node.js proxy built around middleware; this one focuses on
+replaying the same failures and broken payloads with a seed.
 
 npx @raxuis/chaosproxy --target http://localhost:9000 --profile flaky-api
 
