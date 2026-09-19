@@ -72,6 +72,10 @@ func cloneRule(rule Rule) Rule {
 		value := *rule.Redirect
 		cloned.Redirect = &value
 	}
+	if rule.Stall != nil {
+		value := *rule.Stall
+		cloned.Stall = &value
+	}
 	return cloned
 }
 

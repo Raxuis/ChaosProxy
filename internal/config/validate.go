@@ -136,7 +136,7 @@ func validateRules(cfg *Config, addIssue func(int, string, string)) {
 		}
 		if rule.Latency == nil && rule.Status == nil && rule.Hang == nil && rule.Truncate == nil &&
 			rule.Reset == nil && rule.Bandwidth == nil && rule.Headers == nil && rule.Mutate == nil &&
-			rule.Redirect == nil {
+			rule.Redirect == nil && rule.Stall == nil {
 			addIssue(rule.source.line, prefix, "must configure at least one fault")
 		}
 
@@ -153,6 +153,7 @@ func validateRules(cfg *Config, addIssue func(int, string, string)) {
 		}
 		validateHeaders(cfg, rule, prefix, addIssue)
 		validateMutate(rule, prefix, addIssue)
+		validateStall(rule, prefix, addIssue)
 	}
 }
 
@@ -260,6 +261,20 @@ func validateTruncate(rule *Rule, prefix string, addIssue func(int, string, stri
 	validateProbability(rule, prefix, "truncate.probability", rule.Truncate.Probability, addIssue)
 	if math.IsNaN(rule.Truncate.At) || rule.Truncate.At < 0 || rule.Truncate.At > 1 {
 		addIssue(rule.source.lineFor("truncate.at"), prefix+".truncate.at", "must be between 0 and 1")
+	}
+}
+
+func validateStall(rule *Rule, prefix string, addIssue func(int, string, string)) {
+	if rule.Stall == nil {
+		return
+	}
+
+	validateProbability(rule, prefix, "stall.probability", rule.Stall.Probability, addIssue)
+	if rule.Stall.AfterBytes < 0 {
+		addIssue(rule.source.lineFor("stall.after_bytes"), prefix+".stall.after_bytes", "must not be negative")
+	}
+	if rule.Stall.Duration <= 0 {
+		addIssue(rule.source.lineFor("stall.duration"), prefix+".stall.duration", "must be greater than zero")
 	}
 }
 

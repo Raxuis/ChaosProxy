@@ -65,3 +65,42 @@ func formatDuration(duration time.Duration) string {
 	}
 	return duration.String()
 }
+
+type stallJSON struct {
+	Probability float64 `json:"probability"`
+	AfterBytes  int64   `json:"after_bytes"`
+	Duration    string  `json:"duration,omitempty"`
+}
+
+// MarshalJSON writes duration in the YAML notation, such as "5s".
+func (s StallConfig) MarshalJSON() ([]byte, error) {
+	return json.Marshal(stallJSON{
+		Probability: s.Probability,
+		AfterBytes:  s.AfterBytes,
+		Duration:    formatDuration(s.Duration),
+	})
+}
+
+// UnmarshalJSON reads duration written in the YAML notation.
+func (s *StallConfig) UnmarshalJSON(data []byte) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	var raw stallJSON
+	if err := decoder.Decode(&raw); err != nil {
+		return err
+	}
+	var duration time.Duration
+	if raw.Duration != "" {
+		parsed, err := time.ParseDuration(raw.Duration)
+		if err != nil {
+			return fmt.Errorf("stall.duration: %w", err)
+		}
+		duration = parsed
+	}
+	*s = StallConfig{
+		Probability: raw.Probability,
+		AfterBytes:  raw.AfterBytes,
+		Duration:    duration,
+	}
+	return nil
+}

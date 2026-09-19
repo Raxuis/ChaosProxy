@@ -58,6 +58,7 @@ type Rule struct {
 	Headers   *HeadersConfig   `json:"headers,omitempty" yaml:"headers,omitempty"`
 	Mutate    *MutateConfig    `json:"mutate,omitempty" yaml:"mutate,omitempty"`
 	Redirect  *RedirectConfig  `json:"redirect,omitempty" yaml:"redirect,omitempty"`
+	Stall     *StallConfig     `json:"stall,omitempty" yaml:"stall,omitempty"`
 
 	source sourceLocation
 }
@@ -127,6 +128,13 @@ type BandwidthConfig struct {
 	BytesPerSecond int64 `json:"bytes_per_second" yaml:"bytes_per_second"`
 }
 
+// StallConfig pauses the response body mid-stream for Duration after AfterBytes.
+type StallConfig struct {
+	Probability float64       `json:"probability" yaml:"probability"`
+	AfterBytes  int64         `json:"after_bytes" yaml:"after_bytes"`
+	Duration    time.Duration `json:"duration" yaml:"duration"`
+}
+
 type rawConfig struct {
 	Target      string        `yaml:"target"`
 	Seed        int64         `yaml:"seed"`
@@ -157,6 +165,7 @@ type rawRule struct {
 	Headers   *HeadersConfig   `yaml:"headers"`
 	Mutate    *MutateConfig    `yaml:"mutate"`
 	Redirect  *RedirectConfig  `yaml:"redirect"`
+	Stall     *StallConfig     `yaml:"stall"`
 }
 
 type sourceLocation struct {
