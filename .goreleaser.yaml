@@ -31,6 +31,9 @@ checksum:
   name_template: checksums.txt
   algorithm: sha256
 
+sboms:
+  - artifacts: archive
+
 changelog:
   sort: asc
   filters:
