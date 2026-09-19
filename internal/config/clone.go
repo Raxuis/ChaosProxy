@@ -68,6 +68,10 @@ func cloneRule(rule Rule) Rule {
 		value.Operations = slices.Clone(rule.Mutate.Operations)
 		cloned.Mutate = &value
 	}
+	if rule.Redirect != nil {
+		value := *rule.Redirect
+		cloned.Redirect = &value
+	}
 	return cloned
 }
 

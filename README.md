@@ -51,14 +51,14 @@ whose `email` is suddenly `null`.
 
 How it compares with tools frontend developers already use:
 
-|                            | Chaos Proxy                                                                 | [chaos-proxy](https://github.com/gkoos/chaos-proxy) (npm)                                                | Toxiproxy                                                  | MSW                                            | mitmproxy                     | Browser DevTools                       |
-|----------------------------|-----------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|------------------------------------------------------------|------------------------------------------------|-------------------------------|----------------------------------------|
-| Works at                   | HTTP reverse proxy, single Go binary                                        | HTTP proxy on Koa, Node.js CLI and library                                                               | TCP proxy                                                  | request interception in the browser or Node.js | HTTP(S) intercepting proxy    | the browser tab                        |
-| Traffic                    | the real API                                                                | the real API                                                                                             | the real service                                           | mocked handlers, optional passthrough          | the real server               | the real server                        |
-| Targets                    | method and path globs                                                       | method and Koa Router paths, plus global middleware                                                      | a whole proxied port                                       | handlers you write                             | Python addons you write       | URL patterns, whole tab for throttling |
-| Faults                     | latency, status, hang, reset, headers, truncation, bandwidth, JSON mutation | latency, failures, every-nth failures, dropped connections, rate limiting, throttling, custom middleware | latency, bandwidth, timeouts, resets, slicing, data limits | anything you code                              | anything you code             | throttling, blocking, local overrides  |
-| Repeatable runs            | seeds and step-by-step scenarios                                            | every-nth failures                                                                                       | probabilistic toxicity                                     | deterministic code                             | deterministic code            | manual                                 |
-| Covers server-side fetches | yes                                                                         | yes                                                                                                      | yes                                                        | Node.js only, in process                       | yes, when configured as proxy | no                                     |
+|                            | Chaos Proxy                                                                           | [chaos-proxy](https://github.com/gkoos/chaos-proxy) (npm)                                                | Toxiproxy                                                  | MSW                                            | mitmproxy                     | Browser DevTools                       |
+|----------------------------|---------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|------------------------------------------------------------|------------------------------------------------|-------------------------------|----------------------------------------|
+| Works at                   | HTTP reverse proxy, single Go binary                                                  | HTTP proxy on Koa, Node.js CLI and library                                                               | TCP proxy                                                  | request interception in the browser or Node.js | HTTP(S) intercepting proxy    | the browser tab                        |
+| Traffic                    | the real API                                                                          | the real API                                                                                             | the real service                                           | mocked handlers, optional passthrough          | the real server               | the real server                        |
+| Targets                    | method and path globs                                                                 | method and Koa Router paths, plus global middleware                                                      | a whole proxied port                                       | handlers you write                             | Python addons you write       | URL patterns, whole tab for throttling |
+| Faults                     | latency, status, redirect, hang, reset, headers, truncation, bandwidth, JSON mutation | latency, failures, every-nth failures, dropped connections, rate limiting, throttling, custom middleware | latency, bandwidth, timeouts, resets, slicing, data limits | anything you code                              | anything you code             | throttling, blocking, local overrides  |
+| Repeatable runs            | seeds and step-by-step scenarios                                                      | every-nth failures                                                                                       | probabilistic toxicity                                     | deterministic code                             | deterministic code            | manual                                 |
+| Covers server-side fetches | yes                                                                                   | yes                                                                                                      | yes                                                        | Node.js only, in process                       | yes, when configured as proxy | no                                     |
 
 Choose chaos-proxy for rate limiting or custom Node.js middleware, Toxiproxy for
 databases and other non-HTTP services, MSW when there is no backend yet, and
@@ -210,11 +210,12 @@ faults run in this order:
 | 1     | `latency`   | `dist: fixed` with `value`, `jitter`; or `dist: lognormal` with `p50`, `p99` | a delay before the request is handled, on every matching request          |
 | 2     | `reset`     | `probability`                                                                | `ECONNRESET` before any response                                          |
 | 3     | `status`    | `code` (100–599), `probability`, `retry_after` seconds                       | an injected JSON error response; the API is not called                    |
-| 4     | `hang`      | `probability`                                                                | no response until the client gives up                                     |
-| 5     | `mutate`    | `probability`, `max_bytes`, `operations`                                     | a JSON body with changed fields                                           |
-| 6     | `headers`   | `probability`, `set`, `remove`                                               | response headers added, overridden, or removed from the upstream response |
-| 7     | `truncate`  | `probability`, `at` (0–1)                                                    | a body cut at `at`, then a network error                                  |
-| 8     | `bandwidth` | `bytes_per_second`                                                           | the body delivered at that rate, on every matching request                |
+| 4     | `redirect`  | `code` (301, 302, 303, 307, 308), `location`, `probability`                  | an HTTP redirect to `location`; the API is not called                     |
+| 5     | `hang`      | `probability`                                                                | no response until the client gives up                                     |
+| 6     | `mutate`    | `probability`, `max_bytes`, `operations`                                     | a JSON body with changed fields                                           |
+| 7     | `headers`   | `probability`, `set`, `remove`                                               | response headers added, overridden, or removed from the upstream response |
+| 8     | `truncate`  | `probability`, `at` (0–1)                                                    | a body cut at `at`, then a network error                                  |
+| 9     | `bandwidth` | `bytes_per_second`                                                           | the body delivered at that rate, on every matching request                |
 
 Durations use Go syntax such as `250ms`, `1.5s`, or `2m`. Probabilities range
 from `0` to `1`. An injected `status` response looks like this:
@@ -226,8 +227,21 @@ from `0` to `1`. An injected `status` response looks like this:
 }
 ```
 
-With `cors: reflect`, injected responses expose `Retry-After` to browser code, so
-cross-origin frontends can test their backoff.
+With `cors: reflect`, injected responses expose `Retry-After` and `Location` to
+browser code, so cross-origin frontends can test their backoff and redirects.
+
+### Redirect
+
+`redirect` answers with an HTTP redirect status (301, 302, 303, 307, or 308) and
+sets the `Location` header, without calling the upstream API. Useful for testing
+how frontends or API clients handle session expiration or URL moves:
+
+```yaml
+redirect:
+  probability: 1
+  code: 302
+  location: /login
+```
 
 ### Latency
 
@@ -355,12 +369,12 @@ removes every `Access-Control-*` response header.
 
 ### Rules
 
-| Field                                                                              | Default | Description                                                     |
-|------------------------------------------------------------------------------------|---------|-----------------------------------------------------------------|
-| `name`                                                                             |         | unique name, used in logs, events, reports, and the control API |
-| `match`                                                                            |         | route expression                                                |
-| `enabled`                                                                          | `true`  | disabled rules never match                                      |
-| `latency`, `reset`, `status`, `hang`, `mutate`, `headers`, `truncate`, `bandwidth` |         | at least one fault from the [catalog](#fault-catalog)           |
+| Field                                                                                          | Default | Description                                                     |
+|------------------------------------------------------------------------------------------------|---------|-----------------------------------------------------------------|
+| `name`                                                                                         |         | unique name, used in logs, events, reports, and the control API |
+| `match`                                                                                        |         | route expression                                                |
+| `enabled`                                                                                      | `true`  | disabled rules never match                                      |
+| `latency`, `reset`, `status`, `redirect`, `hang`, `mutate`, `headers`, `truncate`, `bandwidth` |         | at least one fault from the [catalog](#fault-catalog)           |
 
 The first enabled rule whose expression matches handles the request; later rules
 are ignored for it.
@@ -468,21 +482,22 @@ GET /api/orders
 X-Chaos: latency=800ms; status=503
 ```
 
-| Directive         | Effect                                           |
-|-------------------|--------------------------------------------------|
-| `latency=800ms`   | wait before handling the request                 |
-| `status=503`      | respond with this status without calling the API |
-| `hang`            | never respond                                    |
-| `reset`           | reset the TCP connection                         |
-| `truncate=0.5`    | cut the response body at this fraction           |
-| `bandwidth=32768` | deliver the body at this many bytes per second   |
-| `off`             | forward the request without any fault            |
+| Directive             | Effect                                                               |
+|-----------------------|----------------------------------------------------------------------|
+| `latency=800ms`       | wait before handling the request                                     |
+| `status=503`          | respond with this status without calling the API                     |
+| `redirect=302:/login` | respond with a 3xx redirect to this location without calling the API |
+| `hang`                | never respond                                                        |
+| `reset`               | reset the TCP connection                                             |
+| `truncate=0.5`        | cut the response body at this fraction                               |
+| `bandwidth=32768`     | deliver the body at this many bytes per second                       |
+| `off`                 | forward the request without any fault                                |
 
 The header replaces rule matching for that request, never shifts rule decision
-sequences, and is removed before the request reaches the API. `status`, `hang`,
-and `reset` cannot be combined. Responses carry `X-Chaos-Applied` with the
-forced faults, `off`, or `disabled` when the proxy runs without
-`--header-overrides`. An invalid header gets a `400` response explaining why.
+sequences, and is removed before the request reaches the API. `status`,
+`redirect`, `hang`, and `reset` cannot be combined. Responses carry
+`X-Chaos-Applied` with the forced faults, `off`, or `disabled` when the proxy
+runs without `--header-overrides`. An invalid header gets a `400` response explaining why.
 
 ## Dashboard and control API
 
