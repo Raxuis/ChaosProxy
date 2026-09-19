@@ -17,6 +17,13 @@ rules:
       probability: 1
       retry_after: 2
 
+  - name: expired-session
+    match: GET /api/session
+    redirect:
+      probability: 1
+      code: 302
+      location: /login
+
   - name: hanging-profile
     match: GET /api/profile
     hang:

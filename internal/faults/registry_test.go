@@ -13,6 +13,7 @@ func TestBuildUsesDeterministicOrder(t *testing.T) {
 		Name:      "all-faults",
 		Latency:   &config.LatencyConfig{Dist: "fixed", Value: time.Millisecond},
 		Status:    &config.StatusConfig{Code: 503, Probability: 0.5},
+		Redirect:  &config.RedirectConfig{Code: 302, Location: "/login", Probability: 0.5},
 		Hang:      &config.HangConfig{Probability: 0.5},
 		Headers:   &config.HeadersConfig{Probability: 0.5, Set: map[string]string{"Cache-Control": "no-cache"}},
 		Truncate:  &config.TruncateConfig{Probability: 0.5, At: 0.5},
@@ -26,7 +27,7 @@ func TestBuildUsesDeterministicOrder(t *testing.T) {
 	for index, fault := range chain {
 		names[index] = fault.Name()
 	}
-	if want := []string{"latency", "reset", "status", "hang", "mutate", "headers", "truncate", "stall", "bandwidth"}; !reflect.DeepEqual(names, want) {
+	if want := []string{"latency", "reset", "status", "redirect", "hang", "mutate", "headers", "truncate", "stall", "bandwidth"}; !reflect.DeepEqual(names, want) {
 		t.Fatalf("fault order = %v, want %v", names, want)
 	}
 }

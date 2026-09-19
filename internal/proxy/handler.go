@@ -238,8 +238,13 @@ func writeShortCircuit(
 ) {
 	copyHeaders(w.Header(), shortCircuit.Headers)
 	applyResponseCORS(w.Header(), r, cors)
-	if w.Header().Get("Access-Control-Allow-Origin") != "" && w.Header().Get("Retry-After") != "" {
-		w.Header().Add("Access-Control-Expose-Headers", "Retry-After")
+	if w.Header().Get("Access-Control-Allow-Origin") != "" {
+		if w.Header().Get("Retry-After") != "" {
+			w.Header().Add("Access-Control-Expose-Headers", "Retry-After")
+		}
+		if w.Header().Get("Location") != "" {
+			w.Header().Add("Access-Control-Expose-Headers", "Location")
+		}
 	}
 	status := shortCircuit.Status
 	if status == 0 {

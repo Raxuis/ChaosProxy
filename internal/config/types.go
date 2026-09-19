@@ -57,6 +57,7 @@ type Rule struct {
 	Bandwidth *BandwidthConfig `json:"bandwidth,omitempty" yaml:"bandwidth,omitempty"`
 	Headers   *HeadersConfig   `json:"headers,omitempty" yaml:"headers,omitempty"`
 	Mutate    *MutateConfig    `json:"mutate,omitempty" yaml:"mutate,omitempty"`
+	Redirect  *RedirectConfig  `json:"redirect,omitempty" yaml:"redirect,omitempty"`
 	Stall     *StallConfig     `json:"stall,omitempty" yaml:"stall,omitempty"`
 
 	source sourceLocation
@@ -102,6 +103,13 @@ type StatusConfig struct {
 // HangConfig configures a request that waits until its context is canceled.
 type HangConfig struct {
 	Probability float64 `json:"probability" yaml:"probability"`
+}
+
+// RedirectConfig configures an injected HTTP redirect.
+type RedirectConfig struct {
+	Probability float64 `json:"probability" yaml:"probability"`
+	Code        int     `json:"code" yaml:"code"`
+	Location    string  `json:"location" yaml:"location"`
 }
 
 // TruncateConfig configures a response body truncation.
@@ -156,6 +164,7 @@ type rawRule struct {
 	Bandwidth *BandwidthConfig `yaml:"bandwidth"`
 	Headers   *HeadersConfig   `yaml:"headers"`
 	Mutate    *MutateConfig    `yaml:"mutate"`
+	Redirect  *RedirectConfig  `yaml:"redirect"`
 	Stall     *StallConfig     `yaml:"stall"`
 }
 
