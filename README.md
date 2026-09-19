@@ -1,5 +1,11 @@
 # Chaos Proxy
 
+[![CI](https://github.com/Raxuis/ChaosProxy/actions/workflows/ci.yml/badge.svg)](https://github.com/Raxuis/ChaosProxy/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Raxuis/ChaosProxy)](https://github.com/Raxuis/ChaosProxy/releases/latest)
+[![npm](https://img.shields.io/npm/v/@raxuis/chaosproxy)](https://www.npmjs.com/package/@raxuis/chaosproxy)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Raxuis/chaosproxy.svg)](https://pkg.go.dev/github.com/Raxuis/chaosproxy)
+[![License: MIT](https://img.shields.io/github/license/Raxuis/ChaosProxy)](LICENSE)
+
 A HTTP-aware chaos proxy for frontend developers — configure latency, errors, truncation and payload mutations per
 route, in code, reproducibly, in CI.
 
