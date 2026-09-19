@@ -66,7 +66,6 @@ func TestStallReadsBytesBeforeAndAfterPause(t *testing.T) {
 	buf := make([]byte, 1024)
 	start := time.Now()
 
-	// First 2 reads (1024 + 1024 = 2048 bytes) should be immediate without stall
 	n1, err1 := io.ReadFull(response.Body, buf)
 	if err1 != nil || n1 != 1024 {
 		t.Fatalf("read 1 = %d, %v; want 1024, nil", n1, err1)
@@ -80,7 +79,6 @@ func TestStallReadsBytesBeforeAndAfterPause(t *testing.T) {
 		t.Fatalf("first 2048 bytes took %v, want < 50ms before stall", timeBeforeStall)
 	}
 
-	// Next read triggers stall for at least 60ms
 	stallStart := time.Now()
 	allRemaining, err3 := io.ReadAll(response.Body)
 	if err3 != nil {
@@ -118,14 +116,12 @@ func TestStallStopsOnContextCancellation(t *testing.T) {
 		t.Fatalf("After(): %v", err)
 	}
 
-	// Read 100 bytes first (exact afterBytes)
 	buf := make([]byte, 100)
 	n, err := io.ReadFull(response.Body, buf)
 	if err != nil || n != 100 {
 		t.Fatalf("read 100 = %d, %v", n, err)
 	}
 
-	// Cancel context in 20ms
 	go func() {
 		time.Sleep(20 * time.Millisecond)
 		cancel()
@@ -169,7 +165,6 @@ func TestStallStopsOnBodyClose(t *testing.T) {
 		t.Fatalf("read 50 = %d, %v", n, err)
 	}
 
-	// Close body after 20ms while it is stalling
 	go func() {
 		time.Sleep(20 * time.Millisecond)
 		_ = response.Body.Close()

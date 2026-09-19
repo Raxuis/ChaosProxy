@@ -2,7 +2,6 @@ package proxy_test
 
 import (
 	"context"
-	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -122,7 +121,6 @@ func TestHandlerStallStopsOnClientDisconnect(t *testing.T) {
 		t.Fatalf("read before stall = %d, %v; want 512, nil", n, err)
 	}
 
-	// Cancel client context while mid-stream stall is waiting
 	cancel()
 
 	readStart := time.Now()
@@ -180,7 +178,6 @@ func TestHandlerStallShutdownDuringStall(t *testing.T) {
 		t.Fatalf("read 256 bytes = %d, %v; want 256, nil", n, err)
 	}
 
-	// Trigger shutdown while stall is active
 	shutdownDone := make(chan struct{})
 	go func() {
 		handler.BeginShutdown()
@@ -196,8 +193,7 @@ func TestHandlerStallShutdownDuringStall(t *testing.T) {
 	if readElapsed >= time.Second {
 		t.Errorf("ReadAll after BeginShutdown took %v, want < 1s", readElapsed)
 	}
-	if readErr == nil && len(payload) > 256 {
-		// Either read error or early EOF without hanging for 5s
+	if readErr == nil {
+		t.Error("ReadAll after BeginShutdown returned no error, want the stalled body cut short")
 	}
-	_ = errors.Is(readErr, context.Canceled)
 }

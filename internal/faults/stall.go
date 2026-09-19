@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/Raxuis/chaosproxy/internal/config"
@@ -24,10 +23,8 @@ type stalledBody struct {
 	cancel     context.CancelFunc
 	afterBytes int64
 	duration   time.Duration
-
-	mu      sync.Mutex
-	sent    int64
-	stalled bool
+	sent       int64
+	stalled    bool
 }
 
 func newStallFault(cfg config.StallConfig) *stallFault {
@@ -69,9 +66,6 @@ func (b *stalledBody) Read(buffer []byte) (int, error) {
 	if len(buffer) == 0 {
 		return 0, nil
 	}
-
-	b.mu.Lock()
-	defer b.mu.Unlock()
 
 	if !b.stalled && b.sent >= b.afterBytes {
 		b.stalled = true
